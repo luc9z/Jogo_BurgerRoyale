@@ -1,6 +1,6 @@
 {
-  "name": "meu-jogo",
-  "version": "0.0.0",
+  "name": "burger-royale",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^8.0.9"
+    "vite": "^5.0.0"
   },
   "dependencies": {
-    "phaser": "^4.0.0"
+    "phaser": "^3.70.0"
   }
 }

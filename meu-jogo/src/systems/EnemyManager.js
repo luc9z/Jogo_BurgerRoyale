@@ -1,6 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-//  EnemyManager — gerencia rounds, spawn e colisões
-// ═══════════════════════════════════════════════════════════
 import Phaser from 'phaser';
 import Enemy from '../entities/Enemy.js';
 import { GAME, ARENA, ROUND, ENEMY, BULLET, EVT } from '../constants.js';
@@ -20,7 +17,10 @@ export default class EnemyManager {
     this.roundActive = false;
     this._ending     = false;
 
-    const count = this._countForRound(this.round);
+    const count = Math.min(
+      ROUND.BASE_COUNT + (this.round - 1) * ROUND.PER_ROUND,
+      ROUND.MAX_COUNT,
+    );
     this._spawnLeft = count;
 
     this.scene.events.emit('round-changed', this.round);
@@ -30,10 +30,6 @@ export default class EnemyManager {
       this._spawnWave(count);
       this.roundActive = true;
     });
-  }
-
-  _countForRound(r) {
-    return Math.min(ROUND.BASE_COUNT + (r - 1) * ROUND.PER_ROUND, ROUND.MAX_COUNT);
   }
 
   _spawnWave(total) {
@@ -48,27 +44,25 @@ export default class EnemyManager {
   }
 
   _spawnOne() {
-    const pad  = 60;
-    const ax   = ARENA.X + pad;
-    const ay   = ARENA.Y + pad;
-    const aw   = ARENA.W - pad * 2;
-    const ah   = ARENA.H - pad * 2;
+    const pad = 60;
+    const ax = ARENA.X + pad, ay = ARENA.Y + pad;
+    const aw = ARENA.W - pad*2, ah = ARENA.H - pad*2;
     const side = Phaser.Math.Between(0, 3);
     let ex, ey;
-
     if      (side === 0) { ex = Phaser.Math.Between(ax, ax+aw); ey = ay; }
-    else if (side === 1) { ex = ax + aw;  ey = Phaser.Math.Between(ay, ay+ah); }
-    else if (side === 2) { ex = Phaser.Math.Between(ax, ax+aw); ey = ay + ah; }
-    else                 { ex = ax;       ey = Phaser.Math.Between(ay, ay+ah); }
+    else if (side === 1) { ex = ax+aw; ey = Phaser.Math.Between(ay, ay+ah); }
+    else if (side === 2) { ex = Phaser.Math.Between(ax, ax+aw); ey = ay+ah; }
+    else                 { ex = ax;    ey = Phaser.Math.Between(ay, ay+ah); }
 
     this.enemies.push(new Enemy(this.scene, ex, ey, this.round));
   }
 
   update(tx, ty) {
-    // Limpa inimigos cujo sprite foi destruído
+    // ✅ Remove apenas os que foram completamente destruídos (sprite inexistente)
     this.enemies = this.enemies.filter(e => {
-      if (e.isDead && (!e.sprite || !e.sprite.active)) return false;
-      return true;
+      // Mantém se ainda está vivo OU se está morto mas sprite ainda existe (anim de morte)
+      if (!e.isDead) return true;
+      return e.sprite?.active === true;
     });
 
     for (const e of this.enemies) {
@@ -77,18 +71,12 @@ export default class EnemyManager {
   }
 
   checkBulletHits(bullets) {
-    // Itera sobre cópia para poder destruir balas
     const list = bullets.slice();
-
     for (const b of list) {
-      if (!b || !b.active) continue;
-
-      // Remove fora da tela
-      if (b.x < -40 || b.x > GAME.WIDTH + 40 ||
-          b.y < -40 || b.y > GAME.HEIGHT + 40) {
+      if (!b?.active) continue;
+      if (b.x < -40 || b.x > GAME.WIDTH+40 || b.y < -40 || b.y > GAME.HEIGHT+40) {
         b.destroy(); continue;
       }
-
       for (const e of this.enemies) {
         if (e.isDead) continue;
         const d = Phaser.Math.Distance.Between(b.x, b.y, e.x, e.y);
@@ -96,9 +84,7 @@ export default class EnemyManager {
           const dx = e.x - b.x, dy = e.y - b.y;
           const len = Math.hypot(dx, dy) || 1;
           e.takeDamage(BULLET.DAMAGE, { x: dx/len, y: dy/len });
-          if (e.isDead) {
-            this.scene.events.emit(EVT.ENEMY_KILLED, ENEMY.POINTS);
-          }
+          if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, ENEMY.POINTS);
           b.destroy();
           break;
         }
@@ -110,7 +96,7 @@ export default class EnemyManager {
     for (const e of this.enemies) {
       if (e.isDead) continue;
       const d = Phaser.Math.Distance.Between(player.x, player.y, e.x, e.y);
-      if (d < 32) {
+      if (d < 34) {
         player.takeDamage((ENEMY.CONTACT_DPS * delta) / 1000);
         return;
       }
@@ -118,13 +104,14 @@ export default class EnemyManager {
   }
 
   isRoundComplete() {
-    if (!this.roundActive) return false;
-    const alive = this.enemies.filter(e => !e.isDead).length;
-    return alive === 0 && this._spawnLeft <= 0 && this.enemies.every(e => e.isDead);
+    if (!this.roundActive || this._ending) return false;
+    if (this._spawnLeft > 0) return false;
+    // ✅ Round completo quando não há nenhum inimigo vivo
+    return this.enemies.every(e => e.isDead);
   }
 
   endRound() {
-    this._ending = true;
+    this._ending     = true;
     this.roundActive = false;
   }
 

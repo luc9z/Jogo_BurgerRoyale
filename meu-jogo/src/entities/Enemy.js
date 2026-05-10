@@ -1,14 +1,12 @@
-// ═══════════════════════════════════════════════════════════
-//  Enemy — Palhaço inimigo
-// ═══════════════════════════════════════════════════════════
 import Phaser from 'phaser';
 import { ENEMY, DEPTH } from '../constants.js';
 
 export default class Enemy {
   constructor(scene, x, y, round = 1) {
-    this.scene  = scene;
-    this.isDead = false;
-    this.isHurt = false;
+    this.scene    = scene;
+    this.isDead   = false;
+    this.isHurt   = false;
+    this._cleaned = false;
 
     this.maxHp = ENEMY.BASE_HP + (round - 1) * ENEMY.HP_PER_ROUND;
     this.hp    = this.maxHp;
@@ -22,7 +20,7 @@ export default class Enemy {
   _create(x, y) {
     const s = this.scene;
 
-    this.shadow = s.add.ellipse(x, y + 28, 30, 9, 0x000000, 0.45)
+    this.shadow = s.add.ellipse(x, y+26, 30, 9, 0x000000, 0.45)
       .setDepth(DEPTH.SHADOW);
 
     this.sprite = s.physics.add.sprite(x, y, 'clown')
@@ -32,37 +30,48 @@ export default class Enemy {
 
     this.sprite.body.setSize(50, 85, true);
     this.sprite.body.setAllowGravity(false);
+
+    // ✅ Começa com idle, não walk
     this.sprite.play('clown-idle');
 
     s.tweens.add({ targets: this.sprite, alpha: 1, duration: 280 });
 
-    this.hpBg  = s.add.rectangle(x, y - 36, 32, 4, 0x440000)
-      .setDepth(DEPTH.ENEMY_UI);
-    this.hpBar = s.add.rectangle(x - 16, y - 36, 32, 4, 0x22cc44)
-      .setOrigin(0, 0.5).setDepth(DEPTH.ENEMY_UI + 1);
+    // Barra de HP
+    this.hpBg  = s.add.rectangle(x, y-34, 32, 4, 0x440000).setDepth(DEPTH.ENEMY_UI);
+    this.hpBar = s.add.rectangle(x-16, y-34, 32, 4, 0x22cc44)
+      .setOrigin(0, 0.5).setDepth(DEPTH.ENEMY_UI+1);
   }
 
   update(tx, ty) {
     if (this.isDead || !this.sprite?.active) return;
 
-    // Movimento via velocityFromAngle (Phaser 3 padrão)
-    const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, tx, ty);
-    this.sprite.setVelocity(
-      Math.cos(angle) * this.speed,
-      Math.sin(angle) * this.speed,
-    );
+    const dist = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, tx, ty);
 
-    this.sprite.setFlipX(this.sprite.body.velocity.x < 0);
+    if (dist > 5) {
+      // ✅ Move usando Angle.Between (método correto no Phaser 3)
+      const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, tx, ty);
+      this.sprite.setVelocity(
+        Math.cos(angle) * this.speed,
+        Math.sin(angle) * this.speed,
+      );
+      this.sprite.setFlipX(this.sprite.body.velocity.x < 0);
 
-    if (!this.isHurt) {
-      const cur = this.sprite.anims.currentAnim?.key;
-      if (cur !== 'clown-walk') this.sprite.play('clown-walk', true);
+      // ✅ Animação de caminhada SOMENTE quando se move
+      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== 'clown-walk') {
+        this.sprite.play('clown-walk', true);
+      }
+    } else {
+      // ✅ Parado → idle
+      this.sprite.setVelocity(0, 0);
+      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== 'clown-idle') {
+        this.sprite.play('clown-idle', true);
+      }
     }
 
     const sx = this.sprite.x, sy = this.sprite.y;
     this.shadow.setPosition(sx, sy + this.sprite.displayHeight * 0.42);
-    this.hpBg.setPosition(sx, sy - 36);
-    this.hpBar.setPosition(sx - 16, sy - 36);
+    this.hpBg.setPosition(sx, sy - 34);
+    this.hpBar.setPosition(sx - 16, sy - 34);
   }
 
   takeDamage(amount, dir) {
@@ -84,11 +93,11 @@ export default class Enemy {
         targets: this.sprite,
         x: this.sprite.x + dir.x * 14,
         y: this.sprite.y + dir.y * 14,
-        duration: 60, yoyo: true,
+        duration: 55, yoyo: true,
       });
     }
 
-    this.scene.time.delayedCall(180, () => {
+    this.scene.time.delayedCall(200, () => {
       if (!this.isDead && this.sprite?.active) {
         this.sprite.clearTint();
         this.isHurt = false;
@@ -99,22 +108,32 @@ export default class Enemy {
   _die() {
     if (this.isDead) return;
     this.isDead = true;
+
     this.sprite.setVelocity(0, 0);
     this.sprite.clearTint();
     this.sprite.play('clown-death', true);
 
+    // ✅ Remove barra de HP imediatamente
     this.hpBg.destroy();
     this.hpBar.destroy();
 
     this._deathFX();
     this._pointsText();
 
+    // ✅ Destrói o sprite após a animação (evita acumulação)
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      this.scene.time.delayedCall(150, () => {
-        if (this.shadow?.active) this.shadow.destroy();
-        if (this.sprite?.active) this.sprite.destroy();
-      });
+      this._cleanup();
     });
+
+    // Fallback: se a animação travar, destrói após 2s
+    this.scene.time.delayedCall(2000, () => this._cleanup());
+  }
+
+  _cleanup() {
+    if (this._cleaned) return;
+    this._cleaned = true;
+    if (this.shadow?.active) this.shadow.destroy();
+    if (this.sprite?.active) this.sprite.destroy();
   }
 
   _deathFX() {
@@ -124,21 +143,20 @@ export default class Enemy {
       const a = (i / 8) * Math.PI * 2;
       const d = Phaser.Math.Between(10, 26);
       g.fillStyle(i % 2 === 0 ? 0xff3300 : 0xffd740, 1);
-      g.fillCircle(x + Math.cos(a) * d, y + Math.sin(a) * d, 3);
+      g.fillCircle(x + Math.cos(a)*d, y + Math.sin(a)*d, 3);
     }
-    this.scene.time.delayedCall(220, () => g.destroy());
+    this.scene.time.delayedCall(240, () => g.destroy());
   }
 
   _pointsText() {
     const { x, y } = this.sprite;
-    const t = this.scene.add.text(x, y - 12, `+${ENEMY.POINTS}`, {
+    const t = this.scene.add.text(x, y-12, `+${ENEMY.POINTS}`, {
       fontFamily: '"Press Start 2P", monospace',
       fontSize: '9px', color: '#ffd740',
       stroke: '#000', strokeThickness: 3,
-    }).setDepth(DEPTH.FX + 1);
-
+    }).setDepth(DEPTH.FX+1);
     this.scene.tweens.add({
-      targets: t, y: y - 50, alpha: 0, duration: 800,
+      targets: t, y: y-50, alpha: 0, duration: 800,
       onComplete: () => t.destroy(),
     });
   }

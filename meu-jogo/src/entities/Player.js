@@ -1,6 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-//  Player — O Rei do Burger
-// ═══════════════════════════════════════════════════════════
 import Phaser from 'phaser';
 import { PLAYER, BULLET, ARENA, DEPTH, EVT } from '../constants.js';
 
@@ -13,7 +10,9 @@ export default class Player {
     this.canShoot     = true;
     this.isInvincible = false;
     this.isDead       = false;
+    this.isMoving     = false;   // flag de movimento real
     this.lastDir      = new Phaser.Math.Vector2(1, 0);
+    this._attackLock  = false;   // bloqueio de troca de anim durante ataque
 
     this._create();
     this._buildControls();
@@ -21,30 +20,26 @@ export default class Player {
 
   _create() {
     const s  = this.scene;
-    const sx = ARENA.X + ARENA.W / 2;
-    const sy = ARENA.Y + ARENA.H / 2;
+    const cx = ARENA.X + ARENA.W / 2;
+    const cy = ARENA.Y + ARENA.H / 2;
 
-    // Sombra
-    this.shadow = s.add.ellipse(sx, sy + 30, 36, 10, 0x000000, 0.5)
+    this.shadow = s.add.ellipse(cx, cy+30, 38, 10, 0x000000, 0.5)
       .setDepth(DEPTH.SHADOW);
 
-    // Sprite com física
-    this.sprite = s.physics.add.sprite(sx, sy, 'king')
+    this.sprite = s.physics.add.sprite(cx, cy, 'king')
       .setScale(PLAYER.SCALE)
       .setDepth(DEPTH.ENTITY)
       .setCollideWorldBounds(true);
 
-    this.sprite.body.setSize(50, 90, true);
+    // Hitbox menor que o frame para evitar colisão falsa com borda
+    this.sprite.body.setSize(48, 80, true);
     this.sprite.body.setAllowGravity(false);
+
+    // ✅ Começa parado com idle
     this.sprite.play('king-idle');
 
-    // Grupo de balas
-    this.bullets = s.physics.add.group({
-      allowGravity: false,
-      collideWorldBounds: false,
-    });
+    this.bullets = s.physics.add.group({ allowGravity: false });
 
-    // Emite estado inicial pra HUD
     s.events.emit('player-health-changed', this.health);
     s.events.emit('ammo-changed', this.ammo);
   }
@@ -62,14 +57,11 @@ export default class Player {
     });
   }
 
-  // ── UPDATE ───────────────────────────────────────────────
   update(_delta) {
     if (this.isDead) return;
     this._move();
     this._handleShoot();
     this._handleReloadKey();
-
-    // Sombra acompanha
     this.shadow.setPosition(
       this.sprite.x,
       this.sprite.y + this.sprite.displayHeight * 0.42,
@@ -88,19 +80,24 @@ export default class Player {
     if (vx !== 0 && vy !== 0) { vx *= 0.7071; vy *= 0.7071; }
 
     sprite.setVelocity(vx, vy);
+    this.isMoving = (vx !== 0 || vy !== 0);
 
-    if (vx !== 0 || vy !== 0) {
+    if (this.isMoving) {
       this.lastDir.set(vx, vy).normalize();
       sprite.setFlipX(vx < 0);
+    }
 
-      const cur = sprite.anims.currentAnim?.key;
-      if (cur !== 'king-attack' && cur !== 'king-hurt') {
-        sprite.play('king-walk', true);
-      }
-    } else {
-      const cur = sprite.anims.currentAnim?.key;
-      if (cur !== 'king-idle' && cur !== 'king-attack' && cur !== 'king-hurt') {
-        sprite.play('king-idle', true);
+    // ✅ Só muda animação se NÃO estiver em ataque ou hurt
+    if (!this._attackLock) {
+      if (this.isMoving) {
+        if (sprite.anims.currentAnim?.key !== 'king-walk') {
+          sprite.play('king-walk', true);
+        }
+      } else {
+        // ✅ Parado → idle (corrige o bug de sprite girando sempre)
+        if (sprite.anims.currentAnim?.key !== 'king-idle') {
+          sprite.play('king-idle', true);
+        }
       }
     }
   }
@@ -108,41 +105,43 @@ export default class Player {
   _handleShoot() {
     if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
     if (!this.canShoot || this.isReloading || this.isDead)  return;
-
     if (this.ammo <= 0) { this._startReload(); return; }
 
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
 
-    // Cria bala — quadrado dourado simples com física
-    const bx = this.sprite.x + this.lastDir.x * 22;
-    const by = this.sprite.y + this.lastDir.y * 8;
+    const bx = this.sprite.x + this.lastDir.x * 24;
+    const by = this.sprite.y + this.lastDir.y * 6;
 
-    // Usa physics.add.image com frame válido + tint
+    // Bala como quadrado dourado físico
     const bullet = this.scene.physics.add.image(bx, by, 'king', 0)
       .setDepth(DEPTH.BULLET)
-      .setTint(0xffd740)
-      .setScale(0.06);
-
-    bullet.body.setSize(32, 32);
+      .setTint(0xffe060)
+      .setScale(0.065);
     bullet.body.setAllowGravity(false);
+    bullet.body.setSize(24, 24);
     bullet.setVelocity(
       this.lastDir.x * BULLET.SPEED,
       this.lastDir.y * BULLET.SPEED,
     );
-
     this.bullets.add(bullet);
 
-    this.scene.cameras.main.flash(35, 255, 220, 80, false);
+    this.scene.cameras.main.flash(30, 255, 220, 80, false);
 
+    // ✅ Animação de ataque com lock — não interrompe sem terminar
+    this._attackLock = true;
     this.sprite.play('king-attack', true);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      if (!this.isDead) this.sprite.play('king-idle', true);
+      this._attackLock = false;
+      if (!this.isDead) {
+        // Volta pra animação correta (idle ou walk)
+        if (this.isMoving) this.sprite.play('king-walk', true);
+        else this.sprite.play('king-idle', true);
+      }
     });
 
     this.canShoot = false;
     this.scene.time.delayedCall(PLAYER.SHOOT_CD_MS, () => { this.canShoot = true; });
-
     if (this.ammo <= 0) this._startReload();
   }
 
@@ -158,10 +157,9 @@ export default class Player {
     this.isReloading = true;
     this.canShoot    = false;
     this.scene.events.emit('reload-start');
-
     this.scene.time.delayedCall(PLAYER.RELOAD_MS, () => {
       if (this.isDead) return;
-      this.ammo        = PLAYER.CLIP_SIZE;
+      this.ammo = PLAYER.CLIP_SIZE;
       this.isReloading = false;
       this.canShoot    = true;
       this.scene.events.emit('reload-done');
@@ -171,7 +169,6 @@ export default class Player {
 
   takeDamage(amount) {
     if (this.isInvincible || this.isDead) return;
-
     this.health = Math.max(0, this.health - amount);
     this.scene.events.emit('player-health-changed', this.health);
 
@@ -182,31 +179,25 @@ export default class Player {
     });
 
     this.isInvincible = true;
-    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => {
-      this.isInvincible = false;
-    });
+    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => { this.isInvincible = false; });
 
     if (this.health <= 0) this._die();
-    else {
-      this.sprite.play('king-hurt', true);
-      this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-        if (!this.isDead) this.sprite.play('king-idle', true);
-      });
-    }
   }
 
   _die() {
     if (this.isDead) return;
     this.isDead = true;
+    this._attackLock = false;
     this.sprite.setVelocity(0, 0);
-    this.sprite.play('king-hurt', true);
+    this.sprite.play('king-idle', true);
+    this.sprite.setTint(0xff2200);
     this.scene.time.delayedCall(400, () => {
       this.scene.events.emit(EVT.PLAYER_DEAD);
     });
   }
 
   reloadFull() {
-    this.ammo        = PLAYER.CLIP_SIZE;
+    this.ammo = PLAYER.CLIP_SIZE;
     this.isReloading = false;
     this.canShoot    = true;
     this.scene.events.emit('reload-done');

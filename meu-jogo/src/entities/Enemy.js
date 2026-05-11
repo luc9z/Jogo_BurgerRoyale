@@ -103,6 +103,8 @@ export default class Enemy {
     this.hpBar.width     = HP_BAR_W * pct;
     this.hpBar.fillColor = pct > 0.5 ? 0x22cc44 : pct > 0.25 ? 0xff8800 : 0xff2200;
 
+    this.scene.sound.play('sfx-clown-hit', { volume: 0.25 });
+
     if (this.hp <= 0) { this._die(); return; }
 
     this.isHurt = true;
@@ -133,6 +135,10 @@ export default class Enemy {
     this.sprite.setVelocity(0, 0);
     this.sprite.clearTint();
     this.sprite.play(`${this.key}-death`, true);
+    this.scene.sound.play('sfx-clown-laugh', {
+      volume: 0.45,
+      detune: Phaser.Math.Between(-150, 150),
+    });
 
     this.hpBg.destroy();
     this.hpBar.destroy();

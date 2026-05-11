@@ -43,6 +43,14 @@ export default class GameScene extends Phaser.Scene {
     this.load.spritesheet('clown-skinny', 'assets/sprites/clown-skinny.png', cfg);
 
     this.load.image('background', 'assets/sprites/background.png');
+
+    // ── Áudio ────────────────────────────────────────────
+    this.load.audio('sfx-shoot',        'assets/audio/shoot.mp3');
+    this.load.audio('sfx-reload',       'assets/audio/reload.mp3');
+    this.load.audio('sfx-player-hurt',  'assets/audio/player-hurt.mp3');
+    this.load.audio('sfx-player-death', 'assets/audio/player-death.mp3');
+    this.load.audio('sfx-clown-hit',    'assets/audio/clown-hit.mp3');
+    this.load.audio('sfx-clown-laugh',  'assets/audio/clown-laugh.mp3');
   }
 
   // ── CREATE ───────────────────────────────────────────────

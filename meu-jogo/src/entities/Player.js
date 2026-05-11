@@ -106,6 +106,7 @@ export default class Player {
 
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
+    this.scene.sound.play('sfx-shoot', { volume: 0.35 });
 
     const bx = this.sprite.x + this.lastDir.x * 30;
     const by = this.sprite.y + this.lastDir.y * 10;
@@ -149,6 +150,7 @@ export default class Player {
     this.isReloading = true;
     this.canShoot    = false;
     this.scene.events.emit('reload-start');
+    this.scene.sound.play('sfx-reload', { volume: 0.55 });
     this.scene.time.delayedCall(PLAYER.RELOAD_MS, () => {
       if (this.isDead) return;
       this.ammo = PLAYER.CLIP_SIZE;
@@ -161,10 +163,15 @@ export default class Player {
 
   takeDamage(amount) {
     if (this.isInvincible || this.isDead) return;
+    const wasAlive = this.health > 0;
     this.health = Math.max(0, this.health - amount);
     this.scene.events.emit('player-health-changed', this.health);
 
     this.scene.cameras.main.flash(60, 160, 0, 0, false);
+
+    if (wasAlive && this.health > 0) {
+      this.scene.sound.play('sfx-player-hurt', { volume: 0.6 });
+    }
 
     if (!this._attackLock) {
       this.sprite.setTint(0xff4444);
@@ -196,6 +203,7 @@ export default class Player {
     this.sprite.setVelocity(0, 0);
     this.sprite.clearTint();
     this.sprite.play(`${SKIN}-death`, true);
+    this.scene.sound.play('sfx-player-death', { volume: 0.7 });
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.scene.time.delayedCall(300, () => {
         this.scene.events.emit(EVT.PLAYER_DEAD);

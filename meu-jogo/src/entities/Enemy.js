@@ -1,54 +1,76 @@
 import Phaser from 'phaser';
-import { ENEMY, DEPTH } from '../constants.js';
+import { ENEMY, ENEMY_TYPES, DEPTH } from '../constants.js';
+
+const HP_BAR_W = 40;
 
 export default class Enemy {
-  constructor(scene, x, y, round = 1) {
+  constructor(scene, x, y, round = 1, type = 'clown') {
     this.scene    = scene;
     this.isDead   = false;
     this.isHurt   = false;
     this._cleaned = false;
 
-    this.maxHp = ENEMY.BASE_HP + (round - 1) * ENEMY.HP_PER_ROUND;
+    const def = ENEMY_TYPES[type] ?? ENEMY_TYPES.clown;
+    this.type  = type;
+    this.key   = def.key;
+    this.scale = def.scale;
+
+    this.maxHp = (ENEMY.BASE_HP + (round - 1) * ENEMY.HP_PER_ROUND) * def.hpMult;
     this.hp    = this.maxHp;
     this.speed = Math.min(
-      ENEMY.BASE_SPEED + (round - 1) * ENEMY.SPEED_PER_ROUND,
+      (ENEMY.BASE_SPEED + (round - 1) * ENEMY.SPEED_PER_ROUND) * def.speedMult,
       ENEMY.MAX_SPEED,
     );
+    this.points = Math.round(ENEMY.POINTS * def.pointsMult);
+
     this._create(x, y);
   }
 
   _create(x, y) {
     const s = this.scene;
+    const k = this.key;
 
-    this.shadow = s.add.ellipse(x, y+26, 30, 9, 0x000000, 0.45)
+    this._halfH = Math.round((100 * this.scale) / 2);
+
+    this.shadow = s.add.ellipse(x, y + this._halfH - 6, 38, 12, 0x000000, 0.45)
       .setDepth(DEPTH.SHADOW);
 
-    this.sprite = s.physics.add.sprite(x, y, 'clown')
-      .setScale(ENEMY.SCALE)
+    this.sprite = s.physics.add.sprite(x, y, k)
+      .setScale(this.scale)
       .setDepth(DEPTH.ENTITY)
       .setAlpha(0);
 
-    this.sprite.body.setSize(50, 85, true);
+    this.sprite.body.setSize(60, 75, true);
     this.sprite.body.setAllowGravity(false);
 
-    // ✅ Começa com idle, não walk
-    this.sprite.play('clown-idle');
+    // Frame inicial aleatório para não sincronizar múltiplos inimigos
+    const idleFrameCount = 3;
+    this.sprite.play({
+      key: `${k}-idle`,
+      startFrame: Phaser.Math.Between(0, idleFrameCount - 1),
+    });
 
     s.tweens.add({ targets: this.sprite, alpha: 1, duration: 280 });
 
     // Barra de HP
-    this.hpBg  = s.add.rectangle(x, y-34, 32, 4, 0x440000).setDepth(DEPTH.ENEMY_UI);
-    this.hpBar = s.add.rectangle(x-16, y-34, 32, 4, 0x22cc44)
-      .setOrigin(0, 0.5).setDepth(DEPTH.ENEMY_UI+1);
+    const hpY = y - this._halfH - 10;
+    const bgColor = this.type === 'clown-fat'    ? 0x884400
+                  : this.type === 'clown-skinny' ? 0x440088
+                  : 0x440000;
+
+    this.hpBg  = s.add.rectangle(x, hpY, HP_BAR_W + 4, 7, bgColor, 0.85)
+      .setDepth(DEPTH.ENEMY_UI);
+    this.hpBar = s.add.rectangle(x - HP_BAR_W / 2, hpY, HP_BAR_W, 5, 0x22cc44)
+      .setOrigin(0, 0.5).setDepth(DEPTH.ENEMY_UI + 1);
   }
 
   update(tx, ty) {
     if (this.isDead || !this.sprite?.active) return;
 
+    const k    = this.key;
     const dist = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, tx, ty);
 
     if (dist > 5) {
-      // ✅ Move usando Angle.Between (método correto no Phaser 3)
       const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, tx, ty);
       this.sprite.setVelocity(
         Math.cos(angle) * this.speed,
@@ -56,22 +78,21 @@ export default class Enemy {
       );
       this.sprite.setFlipX(this.sprite.body.velocity.x < 0);
 
-      // ✅ Animação de caminhada SOMENTE quando se move
-      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== 'clown-walk') {
-        this.sprite.play('clown-walk', true);
+      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== `${k}-walk`) {
+        this.sprite.play(`${k}-walk`, true);
       }
     } else {
-      // ✅ Parado → idle
       this.sprite.setVelocity(0, 0);
-      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== 'clown-idle') {
-        this.sprite.play('clown-idle', true);
+      if (!this.isHurt && this.sprite.anims.currentAnim?.key !== `${k}-idle`) {
+        this.sprite.play(`${k}-idle`, true);
       }
     }
 
     const sx = this.sprite.x, sy = this.sprite.y;
-    this.shadow.setPosition(sx, sy + this.sprite.displayHeight * 0.42);
-    this.hpBg.setPosition(sx, sy - 34);
-    this.hpBar.setPosition(sx - 16, sy - 34);
+    this.shadow.setPosition(sx, sy + this._halfH - 6);
+    const hpY = sy - this._halfH - 10;
+    this.hpBg.setPosition(sx, hpY);
+    this.hpBar.setPosition(sx - HP_BAR_W / 2, hpY);
   }
 
   takeDamage(amount, dir) {
@@ -79,25 +100,25 @@ export default class Enemy {
     this.hp -= amount;
 
     const pct = Math.max(0, this.hp / this.maxHp);
-    this.hpBar.width     = 32 * pct;
+    this.hpBar.width     = HP_BAR_W * pct;
     this.hpBar.fillColor = pct > 0.5 ? 0x22cc44 : pct > 0.25 ? 0xff8800 : 0xff2200;
 
     if (this.hp <= 0) { this._die(); return; }
 
     this.isHurt = true;
-    this.sprite.setTint(0xff7777);
-    this.sprite.play('clown-hurt', true);
+    this.sprite.setTint(0xff6666);
+    this.sprite.play(`${this.key}-hurt`, true);
 
     if (dir) {
       this.scene.tweens.add({
         targets: this.sprite,
-        x: this.sprite.x + dir.x * 14,
-        y: this.sprite.y + dir.y * 14,
-        duration: 55, yoyo: true,
+        x: this.sprite.x + dir.x * 18,
+        y: this.sprite.y + dir.y * 18,
+        duration: 60, yoyo: true,
       });
     }
 
-    this.scene.time.delayedCall(200, () => {
+    this.scene.time.delayedCall(250, () => {
       if (!this.isDead && this.sprite?.active) {
         this.sprite.clearTint();
         this.isHurt = false;
@@ -111,21 +132,15 @@ export default class Enemy {
 
     this.sprite.setVelocity(0, 0);
     this.sprite.clearTint();
-    this.sprite.play('clown-death', true);
+    this.sprite.play(`${this.key}-death`, true);
 
-    // ✅ Remove barra de HP imediatamente
     this.hpBg.destroy();
     this.hpBar.destroy();
 
     this._deathFX();
     this._pointsText();
 
-    // ✅ Destrói o sprite após a animação (evita acumulação)
-    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      this._cleanup();
-    });
-
-    // Fallback: se a animação travar, destrói após 2s
+    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this._cleanup());
     this.scene.time.delayedCall(2000, () => this._cleanup());
   }
 
@@ -139,24 +154,27 @@ export default class Enemy {
   _deathFX() {
     const { x, y } = this.sprite;
     const g = this.scene.add.graphics().setDepth(DEPTH.FX);
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const d = Phaser.Math.Between(10, 26);
-      g.fillStyle(i % 2 === 0 ? 0xff3300 : 0xffd740, 1);
-      g.fillCircle(x + Math.cos(a)*d, y + Math.sin(a)*d, 3);
+    const count = this.type === 'clown-fat' ? 14 : 8;
+    const radius = this.type === 'clown-fat' ? 40 : 28;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const d = Phaser.Math.Between(8, radius);
+      g.fillStyle(i % 2 === 0 ? 0xff2200 : 0xffd740, 1);
+      g.fillCircle(x + Math.cos(a) * d, y + Math.sin(a) * d, this.type === 'clown-fat' ? 5 : 3);
     }
-    this.scene.time.delayedCall(240, () => g.destroy());
+    this.scene.time.delayedCall(280, () => g.destroy());
   }
 
   _pointsText() {
     const { x, y } = this.sprite;
-    const t = this.scene.add.text(x, y-12, `+${ENEMY.POINTS}`, {
+    const t = this.scene.add.text(x, y - 20, `+${this.points}`, {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '9px', color: '#ffd740',
-      stroke: '#000', strokeThickness: 3,
-    }).setDepth(DEPTH.FX+1);
+      fontSize: this.type === 'clown-fat' ? '13px' : '9px',
+      color: this.type === 'clown-fat' ? '#ff8800' : '#ffd740',
+      stroke: '#000', strokeThickness: 4,
+    }).setDepth(DEPTH.FX + 1);
     this.scene.tweens.add({
-      targets: t, y: y-50, alpha: 0, duration: 800,
+      targets: t, y: y - 60, alpha: 0, duration: 900,
       onComplete: () => t.destroy(),
     });
   }

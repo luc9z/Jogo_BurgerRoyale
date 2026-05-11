@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { PLAYER, BULLET, ARENA, DEPTH, EVT } from '../constants.js';
 
+const SKIN = 'king-default';
+
 export default class Player {
   constructor(scene) {
     this.scene        = scene;
@@ -10,9 +12,9 @@ export default class Player {
     this.canShoot     = true;
     this.isInvincible = false;
     this.isDead       = false;
-    this.isMoving     = false;   // flag de movimento real
+    this.isMoving     = false;
     this.lastDir      = new Phaser.Math.Vector2(1, 0);
-    this._attackLock  = false;   // bloqueio de troca de anim durante ataque
+    this._attackLock  = false;
 
     this._create();
     this._buildControls();
@@ -23,20 +25,21 @@ export default class Player {
     const cx = ARENA.X + ARENA.W / 2;
     const cy = ARENA.Y + ARENA.H / 2;
 
-    this.shadow = s.add.ellipse(cx, cy+30, 38, 10, 0x000000, 0.5)
+    // frame 100px × scale → halfH em pixels de tela
+    this._halfH = Math.round((100 * PLAYER.SCALE) / 2);
+    this.shadow = s.add.ellipse(cx, cy + this._halfH - 4, 42, 12, 0x000000, 0.5)
       .setDepth(DEPTH.SHADOW);
 
-    this.sprite = s.physics.add.sprite(cx, cy, 'king')
+    this.sprite = s.physics.add.sprite(cx, cy, SKIN)
       .setScale(PLAYER.SCALE)
       .setDepth(DEPTH.ENTITY)
       .setCollideWorldBounds(true);
 
-    // Hitbox menor que o frame para evitar colisão falsa com borda
-    this.sprite.body.setSize(48, 80, true);
+    // Frame 100×100: body cobre a maior parte do personagem visível
+    this.sprite.body.setSize(60, 75, true);
     this.sprite.body.setAllowGravity(false);
 
-    // ✅ Começa parado com idle
-    this.sprite.play('king-idle');
+    this.sprite.play(`${SKIN}-idle`);
 
     this.bullets = s.physics.add.group({ allowGravity: false });
 
@@ -64,7 +67,7 @@ export default class Player {
     this._handleReloadKey();
     this.shadow.setPosition(
       this.sprite.x,
-      this.sprite.y + this.sprite.displayHeight * 0.42,
+      this.sprite.y + this._halfH - 4,
     );
   }
 
@@ -87,17 +90,11 @@ export default class Player {
       sprite.setFlipX(vx < 0);
     }
 
-    // ✅ Só muda animação se NÃO estiver em ataque ou hurt
     if (!this._attackLock) {
       if (this.isMoving) {
-        if (sprite.anims.currentAnim?.key !== 'king-walk') {
-          sprite.play('king-walk', true);
-        }
+        if (sprite.anims.currentAnim?.key !== `${SKIN}-walk`) sprite.play(`${SKIN}-walk`, true);
       } else {
-        // ✅ Parado → idle (corrige o bug de sprite girando sempre)
-        if (sprite.anims.currentAnim?.key !== 'king-idle') {
-          sprite.play('king-idle', true);
-        }
+        if (sprite.anims.currentAnim?.key !== `${SKIN}-idle`) sprite.play(`${SKIN}-idle`, true);
       }
     }
   }
@@ -110,17 +107,14 @@ export default class Player {
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
 
-    const bx = this.sprite.x + this.lastDir.x * 24;
-    const by = this.sprite.y + this.lastDir.y * 6;
+    const bx = this.sprite.x + this.lastDir.x * 30;
+    const by = this.sprite.y + this.lastDir.y * 10;
 
-    // Bala como quadrado dourado físico
-    const bullet = this.scene.physics.add.image(bx, by, 'king', 0)
-      .setDepth(DEPTH.BULLET)
-      .setTint(0xffe060)
-      .setScale(0.065);
+    const bullet = this.scene.physics.add.image(bx, by, 'bullet')
+      .setDepth(DEPTH.BULLET);
     bullet.body.setAllowGravity(false);
-    bullet.body.setSize(24, 24);
-    bullet.setVelocity(
+    bullet.body.setSize(10, 10, true);
+    bullet.body.setVelocity(
       this.lastDir.x * BULLET.SPEED,
       this.lastDir.y * BULLET.SPEED,
     );
@@ -128,15 +122,13 @@ export default class Player {
 
     this.scene.cameras.main.flash(30, 255, 220, 80, false);
 
-    // ✅ Animação de ataque com lock — não interrompe sem terminar
     this._attackLock = true;
-    this.sprite.play('king-attack', true);
+    this.sprite.play(`${SKIN}-attack`, true);
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this._attackLock = false;
       if (!this.isDead) {
-        // Volta pra animação correta (idle ou walk)
-        if (this.isMoving) this.sprite.play('king-walk', true);
-        else this.sprite.play('king-idle', true);
+        if (this.isMoving) this.sprite.play(`${SKIN}-walk`, true);
+        else               this.sprite.play(`${SKIN}-idle`, true);
       }
     });
 
@@ -173,10 +165,23 @@ export default class Player {
     this.scene.events.emit('player-health-changed', this.health);
 
     this.scene.cameras.main.flash(60, 160, 0, 0, false);
-    this.sprite.setTint(0xff4444);
-    this.scene.time.delayedCall(100, () => {
-      if (!this.isDead) this.sprite.clearTint();
-    });
+
+    if (!this._attackLock) {
+      this.sprite.setTint(0xff4444);
+      this.sprite.play(`${SKIN}-hurt`, true);
+      this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+        if (!this.isDead) {
+          this.sprite.clearTint();
+          if (this.isMoving) this.sprite.play(`${SKIN}-walk`, true);
+          else               this.sprite.play(`${SKIN}-idle`, true);
+        }
+      });
+    } else {
+      this.sprite.setTint(0xff4444);
+      this.scene.time.delayedCall(120, () => {
+        if (!this.isDead) this.sprite.clearTint();
+      });
+    }
 
     this.isInvincible = true;
     this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => { this.isInvincible = false; });
@@ -189,9 +194,15 @@ export default class Player {
     this.isDead = true;
     this._attackLock = false;
     this.sprite.setVelocity(0, 0);
-    this.sprite.play('king-idle', true);
-    this.sprite.setTint(0xff2200);
-    this.scene.time.delayedCall(400, () => {
+    this.sprite.clearTint();
+    this.sprite.play(`${SKIN}-death`, true);
+    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
+      this.scene.time.delayedCall(300, () => {
+        this.scene.events.emit(EVT.PLAYER_DEAD);
+      });
+    });
+    // Fallback caso animação trave
+    this.scene.time.delayedCall(1200, () => {
       this.scene.events.emit(EVT.PLAYER_DEAD);
     });
   }

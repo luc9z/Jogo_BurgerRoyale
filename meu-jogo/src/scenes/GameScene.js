@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   GAME, ARENA, COLOR, DEPTH, EVT,
-  KING_SHEET, CLOWN_SHEET, KING_ANIM, CLOWN_ANIM,
+  SHEET, KING_FRAMES, CLOWN_FRAMES,
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
@@ -30,10 +30,18 @@ export default class GameScene extends Phaser.Scene {
     this.load.on('progress', v => { bar.width = 300 * v; pct.setText(Math.floor(v*100)+'%'); });
     this.load.on('loaderror', f => console.error('Load error:', f.key, f.src));
 
-    this.load.spritesheet('king',  'assets/sprites/king.png',
-      { frameWidth: KING_SHEET.FW,  frameHeight: KING_SHEET.FH  });
-    this.load.spritesheet('clown', 'assets/sprites/clown.png',
-      { frameWidth: CLOWN_SHEET.FW, frameHeight: CLOWN_SHEET.FH });
+    const cfg = { frameWidth: SHEET.FW, frameHeight: SHEET.FH };
+
+    // Rei (jogador) — 3 variantes
+    this.load.spritesheet('king-default', 'assets/sprites/king-default.png', cfg);
+    this.load.spritesheet('king-gold',    'assets/sprites/king-gold.png',    cfg);
+    this.load.spritesheet('king-silver',  'assets/sprites/king-silver.png',  cfg);
+
+    // Palhaços (inimigos) — 3 variantes
+    this.load.spritesheet('clown',        'assets/sprites/clown.png',        cfg);
+    this.load.spritesheet('clown-fat',    'assets/sprites/clown-fat.png',    cfg);
+    this.load.spritesheet('clown-skinny', 'assets/sprites/clown-skinny.png', cfg);
+
     this.load.image('background', 'assets/sprites/background.png');
   }
 
@@ -44,6 +52,7 @@ export default class GameScene extends Phaser.Scene {
     this._roundEnding = false;
     this._goShown     = false;
 
+    this._makeBulletTexture();
     this._createAnims();
     this._buildMap();
 
@@ -81,52 +90,42 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── TEXTURA DE BALA ─────────────────────────────────────
+  _makeBulletTexture() {
+    if (this.textures.exists('bullet')) return;
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffe060, 1);
+    g.fillCircle(6, 6, 6);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(4, 4, 2);
+    g.generateTexture('bullet', 12, 12);
+    g.destroy();
+  }
+
   // ── ANIMAÇÕES ────────────────────────────────────────────
   _createAnims() {
     const a  = this.anims;
     const mk = cfg => { if (!a.exists(cfg.key)) a.create(cfg); };
-    const kTotal = this.textures.get('king').frameTotal  - 1;
-    const cTotal = this.textures.get('clown').frameTotal - 1;
 
-    // Gera frames e filtra os que existem
-    const kFrames = (s, e) => {
-      const f = [];
-      for (let i = s; i <= Math.min(e, kTotal-1); i++) f.push(i);
-      return f.length ? f : [0];
-    };
-    const cFrames = (s, e) => {
-      const f = [];
-      for (let i = s; i <= Math.min(e, cTotal-1); i++) f.push(i);
-      return f.length ? f : [0];
-    };
+    const frames = (key, arr) => a.generateFrameNumbers(key, { frames: arr });
 
-    // ── Rei ────────────────────────────────────────────────
-    mk({ key: 'king-idle',
-      frames: a.generateFrameNumbers('king', { frames: kFrames(KING_ANIM.IDLE.start,   KING_ANIM.IDLE.end)   }),
-      frameRate: 4, repeat: -1 });
-    mk({ key: 'king-walk',
-      frames: a.generateFrameNumbers('king', { frames: kFrames(KING_ANIM.WALK.start,   KING_ANIM.WALK.end)   }),
-      frameRate: 8, repeat: -1 });
-    mk({ key: 'king-attack',
-      frames: a.generateFrameNumbers('king', { frames: kFrames(KING_ANIM.ATTACK.start, KING_ANIM.ATTACK.end) }),
-      frameRate: 12, repeat: 0 });
+    // ── Rei (todas variantes compartilham os mesmos índices) ──
+    for (const king of ['king-default', 'king-gold', 'king-silver']) {
+      mk({ key: `${king}-idle`,   frames: frames(king, KING_FRAMES.IDLE),   frameRate: 4,  repeat: -1 });
+      mk({ key: `${king}-walk`,   frames: frames(king, KING_FRAMES.WALK),   frameRate: 8,  repeat: -1 });
+      mk({ key: `${king}-attack`, frames: frames(king, KING_FRAMES.ATTACK), frameRate: 14, repeat: 0  });
+      mk({ key: `${king}-hurt`,   frames: frames(king, KING_FRAMES.HURT),   frameRate: 10, repeat: 0  });
+      mk({ key: `${king}-death`,  frames: frames(king, KING_FRAMES.DEATH),  frameRate: 7,  repeat: 0  });
+    }
 
-    // ── Palhaço ────────────────────────────────────────────
-    mk({ key: 'clown-idle',
-      frames: a.generateFrameNumbers('clown', { frames: cFrames(CLOWN_ANIM.IDLE.start,   CLOWN_ANIM.IDLE.end)   }),
-      frameRate: 5, repeat: -1 });
-    mk({ key: 'clown-walk',
-      frames: a.generateFrameNumbers('clown', { frames: cFrames(CLOWN_ANIM.WALK.start,   CLOWN_ANIM.WALK.end)   }),
-      frameRate: 8, repeat: -1 });
-    mk({ key: 'clown-attack',
-      frames: a.generateFrameNumbers('clown', { frames: cFrames(CLOWN_ANIM.ATTACK.start, CLOWN_ANIM.ATTACK.end) }),
-      frameRate: 10, repeat: 0 });
-    mk({ key: 'clown-hurt',
-      frames: a.generateFrameNumbers('clown', { frames: cFrames(CLOWN_ANIM.HURT.start,   CLOWN_ANIM.HURT.end)   }),
-      frameRate: 10, repeat: 0 });
-    mk({ key: 'clown-death',
-      frames: a.generateFrameNumbers('clown', { frames: cFrames(CLOWN_ANIM.DEATH.start,  CLOWN_ANIM.DEATH.end)  }),
-      frameRate: 8, repeat: 0 });
+    // ── Palhaços (todas variantes compartilham os mesmos índices) ──
+    for (const clown of ['clown', 'clown-fat', 'clown-skinny']) {
+      mk({ key: `${clown}-idle`,   frames: frames(clown, CLOWN_FRAMES.IDLE),   frameRate: 5,  repeat: -1 });
+      mk({ key: `${clown}-walk`,   frames: frames(clown, CLOWN_FRAMES.WALK),   frameRate: 8,  repeat: -1 });
+      mk({ key: `${clown}-attack`, frames: frames(clown, CLOWN_FRAMES.ATTACK), frameRate: 10, repeat: 0  });
+      mk({ key: `${clown}-hurt`,   frames: frames(clown, CLOWN_FRAMES.HURT),   frameRate: 10, repeat: 0  });
+      mk({ key: `${clown}-death`,  frames: frames(clown, CLOWN_FRAMES.DEATH),  frameRate: 7,  repeat: 0  });
+    }
   }
 
   // ── MAPA ─────────────────────────────────────────────────
@@ -175,7 +174,7 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#000', strokeThickness: 5,
       });
 
-      this.add.text(W/2, H/2-90, 'GAME OVER',          ps('36px','#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-90, 'GAME OVER',               ps('36px','#ff2200')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-38, 'Os palhaços venceram...', ps('10px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2+0,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('11px','#ffd740')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2+30, `Rounds: ${this.enemies.round}`, ps('9px','#ff8800')).setOrigin(0.5).setDepth(D+1);

@@ -43,24 +43,45 @@ export default class EnemyManager {
     next();
   }
 
-  _spawnOne() {
-    const pad = 60;
-    const ax = ARENA.X + pad, ay = ARENA.Y + pad;
-    const aw = ARENA.W - pad*2, ah = ARENA.H - pad*2;
-    const side = Phaser.Math.Between(0, 3);
-    let ex, ey;
-    if      (side === 0) { ex = Phaser.Math.Between(ax, ax+aw); ey = ay; }
-    else if (side === 1) { ex = ax+aw; ey = Phaser.Math.Between(ay, ay+ah); }
-    else if (side === 2) { ex = Phaser.Math.Between(ax, ax+aw); ey = ay+ah; }
-    else                 { ex = ax;    ey = Phaser.Math.Between(ay, ay+ah); }
+  _pickType() {
+    const r = this.round;
+    const roll = Math.random();
 
-    this.enemies.push(new Enemy(this.scene, ex, ey, this.round));
+    // Round 1: só palhaços normais
+    if (r === 1) return 'clown';
+
+    // Round 2+: introduce magro
+    if (r === 2) return roll < 0.25 ? 'clown-skinny' : 'clown';
+
+    // Round 3+: introduce gordo
+    const fatChance    = Math.min(0.05 * (r - 2), 0.30);
+    const skinnyChance = Math.min(0.10 * (r - 1), 0.35);
+
+    if (roll < fatChance) return 'clown-fat';
+    if (roll < fatChance + skinnyChance) return 'clown-skinny';
+    return 'clown';
+  }
+
+  _spawnOne() {
+    this._spawnLeft = Math.max(0, this._spawnLeft - 1);
+
+    // Inimigos surgem nas bordas da arena com margem suficiente para caber o sprite
+    const pad = 80;
+    const side = Phaser.Math.Between(0, 3);
+    const ax = ARENA.X + pad, ay = ARENA.Y + pad;
+    const aw = ARENA.W - pad * 2, ah = ARENA.H - pad * 2;
+    let ex, ey;
+    if      (side === 0) { ex = Phaser.Math.Between(ax, ax + aw); ey = ARENA.Y + pad; }
+    else if (side === 1) { ex = ARENA.X + ARENA.W - pad; ey = Phaser.Math.Between(ay, ay + ah); }
+    else if (side === 2) { ex = Phaser.Math.Between(ax, ax + aw); ey = ARENA.Y + ARENA.H - pad; }
+    else                 { ex = ARENA.X + pad; ey = Phaser.Math.Between(ay, ay + ah); }
+
+    const type = this._pickType();
+    this.enemies.push(new Enemy(this.scene, ex, ey, this.round, type));
   }
 
   update(tx, ty) {
-    // ✅ Remove apenas os que foram completamente destruídos (sprite inexistente)
     this.enemies = this.enemies.filter(e => {
-      // Mantém se ainda está vivo OU se está morto mas sprite ainda existe (anim de morte)
       if (!e.isDead) return true;
       return e.sprite?.active === true;
     });
@@ -84,7 +105,7 @@ export default class EnemyManager {
           const dx = e.x - b.x, dy = e.y - b.y;
           const len = Math.hypot(dx, dy) || 1;
           e.takeDamage(BULLET.DAMAGE, { x: dx/len, y: dy/len });
-          if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, ENEMY.POINTS);
+          if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, e.points);
           b.destroy();
           break;
         }
@@ -106,7 +127,6 @@ export default class EnemyManager {
   isRoundComplete() {
     if (!this.roundActive || this._ending) return false;
     if (this._spawnLeft > 0) return false;
-    // ✅ Round completo quando não há nenhum inimigo vivo
     return this.enemies.every(e => e.isDead);
   }
 

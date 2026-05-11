@@ -9,36 +9,48 @@ export const ARENA = {
 export const PLAYER = {
   SPEED: 190, MAX_HEALTH: 100, CLIP_SIZE: 10,
   RELOAD_MS: 1800, SHOOT_CD_MS: 280, IFRAME_MS: 700,
-  SCALE: 0.9,
+  SCALE: 1.3,
 };
 
 export const ENEMY = {
   BASE_HP: 80, HP_PER_ROUND: 20,
   BASE_SPEED: 55, SPEED_PER_ROUND: 4, MAX_SPEED: 130,
-  POINTS: 100, CONTACT_DPS: 18, SCALE: 0.85, HIT_RADIUS: 30,
+  POINTS: 100, CONTACT_DPS: 18, HIT_RADIUS: 32,
 };
 
-export const BULLET  = { SPEED: 520, DAMAGE: 25 };
-export const ROUND   = { WARN_MS: 3500, SPAWN_MS: 500, BASE_COUNT: 5, PER_ROUND: 2, MAX_COUNT: 30 };
-
-// Spritesheet: king.png 6 frames FW=112 FH=115 | clown.png 29 frames FW=105 FH=115
-export const KING_SHEET  = { FW: 112, FH: 115 };
-export const CLOWN_SHEET = { FW: 105, FH: 115 };
-
-// King: 0-1=idle  2-4=walk  5=attack
-export const KING_ANIM = {
-  IDLE:   { start: 0, end: 1 },
-  WALK:   { start: 2, end: 4 },
-  ATTACK: { start: 5, end: 5 },
+// Tipos de inimigo com multiplicadores de stats
+export const ENEMY_TYPES = {
+  clown:         { key: 'clown',        scale: 1.2,  hpMult: 1.0, speedMult: 1.0,  pointsMult: 1.0 },
+  'clown-fat':   { key: 'clown-fat',    scale: 1.5,  hpMult: 2.0, speedMult: 0.65, pointsMult: 2.0 },
+  'clown-skinny':{ key: 'clown-skinny', scale: 0.95, hpMult: 0.6, speedMult: 1.6,  pointsMult: 1.5 },
 };
 
-// Clown: idle=0-3  walk=4-8  jump=9-12  attack=13-16  taunt=17-20  hurt=21-24  death=25-28
-export const CLOWN_ANIM = {
-  IDLE:   { start: 0,  end: 3  },
-  WALK:   { start: 4,  end: 8  },
-  ATTACK: { start: 13, end: 16 },
-  HURT:   { start: 21, end: 24 },
-  DEATH:  { start: 25, end: 28 },
+export const BULLET = { SPEED: 520, DAMAGE: 25 };
+export const ROUND  = { WARN_MS: 3500, SPAWN_MS: 500, BASE_COUNT: 5, PER_ROUND: 2, MAX_COUNT: 30 };
+
+// Todos os spritesheets são 500×500 → grid 5×5 = frame 100×100 = 25 frames (0-24)
+export const SHEET = { FW: 100, FH: 100, COLS: 5 };
+
+// Linha 0 (frames 0-4):   idle
+// Linha 1 (frames 5-9):   walk
+// Linha 2 (frames 10-14): attack / shoot
+// Linha 3 (frames 15-19): hurt
+// Linha 4 (frames 20-24): death
+
+export const KING_FRAMES = {
+  IDLE:   [0, 1, 2, 3],
+  WALK:   [5, 6, 7, 8, 9],
+  ATTACK: [10, 11, 12, 13, 14],
+  HURT:   [15, 16],
+  DEATH:  [20, 21, 22, 23],
+};
+
+export const CLOWN_FRAMES = {
+  IDLE:   [0, 1, 2],
+  WALK:   [5, 6, 7, 8, 9],
+  ATTACK: [10, 11, 12, 13, 14],
+  HURT:   [15, 16],
+  DEATH:  [20, 21, 22, 23],
 };
 
 export const COLOR = {

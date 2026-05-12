@@ -103,13 +103,22 @@ export default class Player {
 
   _fireBullet(angleRad) {
     const w  = this.weaponDef;
-    const bx = this.sprite.x + this.lastDir.x * 30;
-    const by = this.sprite.y + this.lastDir.y * 10;
+    const bx = this.sprite.x + Math.cos(angleRad) * 30;
+    const by = this.sprite.y + Math.sin(angleRad) * 30;
+
     const bullet = this.scene.physics.add.image(bx, by, 'bullet').setDepth(DEPTH.BULLET);
     bullet.body.setAllowGravity(false);
     bullet.body.setSize(10, 10, true);
-    bullet.body.setVelocity(Math.cos(angleRad) * w.bulletSpeed, Math.sin(angleRad) * w.bulletSpeed);
+
+    // Adiciona ao grupo ANTES de aplicar velocidade — o group.add() reseta a velocidade
     this.bullets.add(bullet);
+    bullet.body.setVelocity(Math.cos(angleRad) * w.bulletSpeed, Math.sin(angleRad) * w.bulletSpeed);
+
+    // Metadados para range e dano
+    bullet._ox     = bx;
+    bullet._oy     = by;
+    bullet._range  = w.range;
+    bullet._damage = w.damage;
   }
 
   _handleShoot() {

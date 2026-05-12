@@ -29,10 +29,10 @@ export const BULLET = { SPEED: 520, DAMAGE: 25 };
 export const ROUND  = { WARN_MS: 3500, SPAWN_MS: 500, BASE_COUNT: 5, PER_ROUND: 2, MAX_COUNT: 30 };
 
 export const WEAPONS = {
-  pistol:     { name: 'PISTOLA',      damage: 25,  bulletSpeed: 520, clipSize: 10, shootCd: 280, reloadMs: 1800, spread: 0,    pellets: 1 },
-  shotgun:    { name: 'ESCOPETA',     damage: 28,  bulletSpeed: 420, clipSize: 6,  shootCd: 650, reloadMs: 2000, spread: 0.28, pellets: 5 },
-  machinegun: { name: 'METRALHADORA', damage: 12,  bulletSpeed: 600, clipSize: 30, shootCd: 95,  reloadMs: 1500, spread: 0.08, pellets: 1 },
-  sniper:     { name: 'SNIPER',       damage: 90,  bulletSpeed: 950, clipSize: 3,  shootCd: 900, reloadMs: 2500, spread: 0,    pellets: 1 },
+  pistol:     { name: 'PISTOLA',      damage: 25, bulletSpeed: 520, clipSize: 10, shootCd: 280, reloadMs: 1800, spread: 0,    pellets: 1, range: 620  },
+  shotgun:    { name: 'ESCOPETA',     damage: 28, bulletSpeed: 420, clipSize: 6,  shootCd: 650, reloadMs: 2000, spread: 0.28, pellets: 5, range: 190  },
+  machinegun: { name: 'METRALHADORA', damage: 12, bulletSpeed: 600, clipSize: 30, shootCd: 95,  reloadMs: 1500, spread: 0.08, pellets: 1, range: 500  },
+  sniper:     { name: 'SNIPER',       damage: 90, bulletSpeed: 950, clipSize: 3,  shootCd: 900, reloadMs: 2500, spread: 0,    pellets: 1, range: 1400 },
 };
 
 export const MYSTERY_BOX = { COST: 500, INTERACT_DIST: 60 };

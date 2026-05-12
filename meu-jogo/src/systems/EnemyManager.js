@@ -95,16 +95,26 @@ export default class EnemyManager {
     const list = bullets.slice();
     for (const b of list) {
       if (!b?.active) continue;
+
+      // Fora da tela
       if (b.x < -40 || b.x > GAME.WIDTH+40 || b.y < -40 || b.y > GAME.HEIGHT+40) {
         b.destroy(); continue;
       }
+
+      // Limite de alcance da arma
+      if (b._range !== undefined) {
+        if (Phaser.Math.Distance.Between(b._ox, b._oy, b.x, b.y) > b._range) {
+          b.destroy(); continue;
+        }
+      }
+
       for (const e of this.enemies) {
         if (e.isDead) continue;
         const d = Phaser.Math.Distance.Between(b.x, b.y, e.x, e.y);
         if (d < ENEMY.HIT_RADIUS) {
           const dx = e.x - b.x, dy = e.y - b.y;
           const len = Math.hypot(dx, dy) || 1;
-          e.takeDamage(BULLET.DAMAGE, { x: dx/len, y: dy/len });
+          e.takeDamage(b._damage ?? BULLET.DAMAGE, { x: dx/len, y: dy/len });
           if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, e.points);
           b.destroy();
           break;

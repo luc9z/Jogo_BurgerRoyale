@@ -103,7 +103,7 @@ export default class GameScene extends Phaser.Scene {
     this.player.update(delta);
     this.enemies.update(this.player.x, this.player.y);
     this.enemies.checkBulletHits(this.player.bullets.getChildren());
-    this.enemies.applyContactDamage(this.player, delta);
+    this.enemies.applyContactDamage(this.player);
     this.hud.update(this.player.ammo, this.enemies.aliveCount);
 
     const weapon = this.mysteryBox.update(this.player.x, this.player.y, this.score);

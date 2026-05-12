@@ -6,7 +6,7 @@ const SKIN = 'king-default';
 export default class Player {
   constructor(scene) {
     this.scene        = scene;
-    this.health       = PLAYER.MAX_HEALTH;
+    this.hearts       = PLAYER.MAX_HEARTS;
     this.weaponKey    = 'pistol';
     this.weaponDef    = WEAPONS.pistol;
     this.ammo         = this.weaponDef.clipSize;
@@ -45,7 +45,7 @@ export default class Player {
 
     this.bullets = s.physics.add.group({ allowGravity: false });
 
-    s.events.emit('player-health-changed', this.health);
+    s.events.emit('hearts-changed', this.hearts);
     s.events.emit('ammo-changed', this.ammo);
   }
 
@@ -189,20 +189,19 @@ export default class Player {
     this.scene.events.emit(EVT.WEAPON_CHANGED, key);
   }
 
-  takeDamage(amount) {
+  takeDamage(hearts = 1) {
     if (this.isInvincible || this.isDead) return;
-    const wasAlive = this.health > 0;
-    this.health = Math.max(0, this.health - amount);
-    this.scene.events.emit('player-health-changed', this.health);
 
-    this.scene.cameras.main.flash(60, 160, 0, 0, false);
+    this.hearts = Math.max(0, this.hearts - hearts);
+    this.scene.events.emit('hearts-changed', this.hearts);
 
-    if (wasAlive && this.health > 0) {
-      this.scene.sound.play('sfx-player-hurt', { volume: 0.6 });
-    }
+    // Feedback visual e sonoro impactante
+    this.scene.cameras.main.flash(90, 200, 0, 0, false);
+    this.scene.cameras.main.shake(200, 0.009);
+    this.scene.sound.play('sfx-player-hurt', { volume: 0.65 });
 
     if (!this._attackLock) {
-      this.sprite.setTint(0xff4444);
+      this.sprite.setTint(0xff2222);
       this.sprite.play(`${SKIN}-hurt`, true);
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         if (!this.isDead) {
@@ -212,8 +211,8 @@ export default class Player {
         }
       });
     } else {
-      this.sprite.setTint(0xff4444);
-      this.scene.time.delayedCall(120, () => {
+      this.sprite.setTint(0xff2222);
+      this.scene.time.delayedCall(150, () => {
         if (!this.isDead) this.sprite.clearTint();
       });
     }
@@ -221,7 +220,7 @@ export default class Player {
     this.isInvincible = true;
     this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => { this.isInvincible = false; });
 
-    if (this.health <= 0) this._die();
+    if (this.hearts <= 0) this._die();
   }
 
   _die() {

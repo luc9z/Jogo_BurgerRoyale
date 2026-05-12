@@ -123,12 +123,12 @@ export default class EnemyManager {
     }
   }
 
-  applyContactDamage(player, delta) {
+  applyContactDamage(player) {
     for (const e of this.enemies) {
       if (e.isDead) continue;
       const d = Phaser.Math.Distance.Between(player.x, player.y, e.x, e.y);
       if (d < 34) {
-        player.takeDamage((ENEMY.CONTACT_DPS * delta) / 1000);
+        player.takeDamage(ENEMY.CONTACT_HEARTS);
         return;
       }
     }

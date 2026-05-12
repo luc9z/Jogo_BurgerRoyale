@@ -12,30 +12,29 @@ export default class HUD {
     const { WIDTH: W, HEIGHT: H } = GAME;
     const D = DEPTH.HUD;
 
-    // Estilo base da fonte pixel (sem emoji)
     const ps = (sz, col = '#ffffff') => ({
       fontFamily: '"Press Start 2P", monospace',
       fontSize: sz, color: col,
       stroke: '#000000', strokeThickness: 3,
     });
 
-    // ── Painel VIDA + AMMO + ARMA ───────────────────────────
+    // ── Painel CORAÇÕES + AMMO + ARMA ──────────────────────
     const lx = 12, ly = 5, lw = 268, lh = 74;
     const lb = s.add.graphics().setDepth(D);
     lb.fillStyle(COLOR.HUD_BG, 0.88); lb.fillRoundedRect(lx, ly, lw, lh, 5);
     lb.lineStyle(1, COLOR.HUD_BORDER, 1); lb.strokeRoundedRect(lx, ly, lw, lh, 5);
 
-    // Vida
-    s.add.text(lx + 8, ly + 7, 'VIDA', ps('7px', '#ff5555')).setDepth(D + 1);
-    const hbx = lx + 58, hby = ly + 8, hbw = 174, hbh = 12;
-    s.add.rectangle(hbx + hbw / 2, hby + hbh / 2, hbw, hbh, 0x330000).setDepth(D + 1);
-    this._hpBar  = s.add.rectangle(hbx, hby, hbw, hbh, COLOR.GREEN).setOrigin(0, 0).setDepth(D + 2);
-    this._hpText = s.add.text(hbx + hbw + 5, hby, '100', ps('9px')).setOrigin(0, 0).setDepth(D + 2);
+    // Corações
+    s.add.text(lx + 8, ly + 10, 'HP', ps('7px', '#ff5555')).setDepth(D + 1);
+    this._heartGfx = s.add.graphics().setDepth(D + 2);
+    this._heartOriginX = lx + 52;
+    this._heartOriginY = ly + 7;
+    this._drawHearts(PLAYER.MAX_HEARTS);
 
     // Ammo
     s.add.text(lx + 8, ly + 32, 'AMMO', ps('7px', '#ffdd44')).setDepth(D + 1);
-    this._ammoIcons = [];
-    this._ammoDepth = D + 2;
+    this._ammoIcons  = [];
+    this._ammoDepth  = D + 2;
     this._ammoOriginX = lx + 58;
     this._ammoOriginY = ly + 34;
     this._rebuildAmmoIcons(PLAYER.CLIP_SIZE);
@@ -76,16 +75,50 @@ export default class HUD {
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
-    // Dica de controles
-    s.add.text(W / 2, H - 5, 'WASD mover  |  ESPACO atirar  |  R recarregar', {
+    s.add.text(W / 2, H - 5, 'WASD mover  |  ESPACO atirar  |  R recarregar  |  E mystery box', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '6px', color: '#ffffff22',
+      fontSize: '5px', color: '#ffffff22',
     }).setOrigin(0.5, 1).setDepth(D);
+  }
+
+  // Desenha corações pixel art (7×6 px por coração, pixel = 2px)
+  _drawHearts(filled) {
+    const g  = this._heartGfx;
+    const ox = this._heartOriginX;
+    const oy = this._heartOriginY;
+    const S  = 2;   // tamanho do pixel
+    const gap = 20; // espaçamento entre corações
+
+    g.clear();
+
+    for (let i = 0; i < PLAYER.MAX_HEARTS; i++) {
+      const x = ox + i * gap;
+      const y = oy;
+      const alive = i < filled;
+      const col   = alive ? 0xff2222 : 0x330000;
+      const alpha = alive ? 1.0 : 0.5;
+
+      g.fillStyle(col, alpha);
+      // Pixel art de coração (7 cols × 6 linhas):
+      //  XX XX
+      // XXXXXXX
+      // XXXXXXX
+      //  XXXXX
+      //   XXX
+      //    X
+      g.fillRect(x + S,     y,       2*S, S);
+      g.fillRect(x + 4*S,   y,       2*S, S);
+      g.fillRect(x,         y +   S, 7*S, S);
+      g.fillRect(x,         y + 2*S, 7*S, S);
+      g.fillRect(x +   S,   y + 3*S, 5*S, S);
+      g.fillRect(x + 2*S,   y + 4*S, 3*S, S);
+      g.fillRect(x + 3*S,   y + 5*S,   S, S);
+    }
   }
 
   _listen() {
     const s = this.scene;
-    s.events.on('player-health-changed', hp  => this._setHP(hp));
+    s.events.on('hearts-changed',    h  => this._setHearts(h));
     s.events.on('score-changed',  sc => this._scoreTxt.setText(sc.toLocaleString('pt-BR')));
     s.events.on('round-changed',  r  => this._roundTxt.setText(String(r)));
     s.events.on('ammo-changed',   a  => this._setAmmo(a));
@@ -95,11 +128,15 @@ export default class HUD {
     s.events.on(EVT.WEAPON_CHANGED, key => this._setWeapon(key));
   }
 
-  _setHP(hp) {
-    const pct = Math.max(0, hp / 100);
-    this._hpBar.width     = 174 * pct;
-    this._hpBar.fillColor = pct > 0.5 ? COLOR.GREEN : pct > 0.25 ? COLOR.ORANGE : COLOR.RED;
-    this._hpText.setText(String(Math.ceil(hp)));
+  _setHearts(filled) {
+    this._drawHearts(filled);
+
+    // Pulso rápido no painel quando perde coração
+    this.scene.tweens.add({
+      targets: this._heartGfx,
+      scaleX: 1.25, scaleY: 1.25,
+      duration: 80, yoyo: true, ease: 'Power2',
+    });
   }
 
   _rebuildAmmoIcons(clipSize) {

@@ -1,4 +1,4 @@
-import { GAME, PLAYER, COLOR, DEPTH } from '../constants.js';
+import { GAME, PLAYER, COLOR, DEPTH, WEAPONS, EVT } from '../constants.js';
 
 export default class HUD {
   constructor(scene) {
@@ -19,8 +19,8 @@ export default class HUD {
       stroke: '#000000', strokeThickness: 3,
     });
 
-    // ── Painel VIDA + AMMO ──────────────────────────────────
-    const lx = 12, ly = 5, lw = 268, lh = 58;
+    // ── Painel VIDA + AMMO + ARMA ───────────────────────────
+    const lx = 12, ly = 5, lw = 268, lh = 74;
     const lb = s.add.graphics().setDepth(D);
     lb.fillStyle(COLOR.HUD_BG, 0.88); lb.fillRoundedRect(lx, ly, lw, lh, 5);
     lb.lineStyle(1, COLOR.HUD_BORDER, 1); lb.strokeRoundedRect(lx, ly, lw, lh, 5);
@@ -35,12 +35,15 @@ export default class HUD {
     // Ammo
     s.add.text(lx + 8, ly + 32, 'AMMO', ps('7px', '#ffdd44')).setDepth(D + 1);
     this._ammoIcons = [];
-    for (let i = 0; i < PLAYER.CLIP_SIZE; i++) {
-      const ic = s.add.rectangle(lx + 58 + i * 16, ly + 34, 11, 11, COLOR.GOLD_LIGHT)
-        .setOrigin(0, 0).setDepth(D + 2);
-      this._ammoIcons.push(ic);
-    }
-    this._reloadLbl = s.add.text(lx + 58, ly + 34, '', ps('8px', '#ff8800')).setDepth(D + 2);
+    this._ammoDepth = D + 2;
+    this._ammoOriginX = lx + 58;
+    this._ammoOriginY = ly + 34;
+    this._rebuildAmmoIcons(PLAYER.CLIP_SIZE);
+    this._reloadLbl = s.add.text(lx + 58, ly + 34, '', ps('8px', '#ff8800')).setDepth(D + 3);
+
+    // Arma equipada
+    s.add.text(lx + 8, ly + 57, 'ARMA', ps('7px', '#aaaaff')).setDepth(D + 1);
+    this._weaponTxt = s.add.text(lx + 58, ly + 57, 'PISTOLA', ps('7px', '#ffffff')).setDepth(D + 2);
 
     // ── Painel PONTOS + ROUND ───────────────────────────────
     const rx = W - 12 - 228, ry = 5, rw = 228, rh = 58;
@@ -89,6 +92,7 @@ export default class HUD {
     s.events.on('reload-start',   () => this._reloadLbl.setText('RECARREGANDO...'));
     s.events.on('reload-done',    () => this._reloadLbl.setText(''));
     s.events.on('show-round-banner', (r, c) => this._showBanner(r, c));
+    s.events.on(EVT.WEAPON_CHANGED, key => this._setWeapon(key));
   }
 
   _setHP(hp) {
@@ -98,10 +102,34 @@ export default class HUD {
     this._hpText.setText(String(Math.ceil(hp)));
   }
 
-  _setAmmo(ammo) {
-    for (let i = 0; i < PLAYER.CLIP_SIZE; i++) {
-      this._ammoIcons[i].fillColor = i < ammo ? COLOR.GOLD_LIGHT : 0x2a2a2a;
+  _rebuildAmmoIcons(clipSize) {
+    for (const ic of this._ammoIcons) ic.destroy();
+    this._ammoIcons = [];
+    const max = Math.min(clipSize, 20);
+    const gap = max <= 10 ? 16 : 8;
+    for (let i = 0; i < max; i++) {
+      const ic = this.scene.add.rectangle(
+        this._ammoOriginX + i * gap, this._ammoOriginY,
+        gap <= 8 ? 6 : 11, 11, COLOR.GOLD_LIGHT,
+      ).setOrigin(0, 0).setDepth(this._ammoDepth);
+      this._ammoIcons.push(ic);
     }
+    this._currentClip = clipSize;
+  }
+
+  _setAmmo(ammo) {
+    const max = this._ammoIcons.length;
+    const pct = ammo / this._currentClip;
+    for (let i = 0; i < max; i++) {
+      this._ammoIcons[i].fillColor = (i / max) < pct ? COLOR.GOLD_LIGHT : 0x2a2a2a;
+    }
+  }
+
+  _setWeapon(key) {
+    const def = WEAPONS[key];
+    if (!def) return;
+    this._weaponTxt.setText(def.name);
+    this._rebuildAmmoIcons(def.clipSize);
   }
 
   _showBanner(round, count) {

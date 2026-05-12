@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PLAYER, BULLET, ARENA, DEPTH, EVT } from '../constants.js';
+import { PLAYER, ARENA, DEPTH, EVT, WEAPONS } from '../constants.js';
 
 const SKIN = 'king-default';
 
@@ -7,7 +7,9 @@ export default class Player {
   constructor(scene) {
     this.scene        = scene;
     this.health       = PLAYER.MAX_HEALTH;
-    this.ammo         = PLAYER.CLIP_SIZE;
+    this.weaponKey    = 'pistol';
+    this.weaponDef    = WEAPONS.pistol;
+    this.ammo         = this.weaponDef.clipSize;
     this.isReloading  = false;
     this.canShoot     = true;
     this.isInvincible = false;
@@ -99,27 +101,32 @@ export default class Player {
     }
   }
 
+  _fireBullet(angleRad) {
+    const w  = this.weaponDef;
+    const bx = this.sprite.x + this.lastDir.x * 30;
+    const by = this.sprite.y + this.lastDir.y * 10;
+    const bullet = this.scene.physics.add.image(bx, by, 'bullet').setDepth(DEPTH.BULLET);
+    bullet.body.setAllowGravity(false);
+    bullet.body.setSize(10, 10, true);
+    bullet.body.setVelocity(Math.cos(angleRad) * w.bulletSpeed, Math.sin(angleRad) * w.bulletSpeed);
+    this.bullets.add(bullet);
+  }
+
   _handleShoot() {
     if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
     if (!this.canShoot || this.isReloading || this.isDead)  return;
     if (this.ammo <= 0) { this._startReload(); return; }
 
+    const w = this.weaponDef;
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
     this.scene.sound.play('sfx-shoot', { volume: 0.35 });
 
-    const bx = this.sprite.x + this.lastDir.x * 30;
-    const by = this.sprite.y + this.lastDir.y * 10;
-
-    const bullet = this.scene.physics.add.image(bx, by, 'bullet')
-      .setDepth(DEPTH.BULLET);
-    bullet.body.setAllowGravity(false);
-    bullet.body.setSize(10, 10, true);
-    bullet.body.setVelocity(
-      this.lastDir.x * BULLET.SPEED,
-      this.lastDir.y * BULLET.SPEED,
-    );
-    this.bullets.add(bullet);
+    const baseAngle = Math.atan2(this.lastDir.y, this.lastDir.x);
+    for (let i = 0; i < w.pellets; i++) {
+      const a = baseAngle + (Math.random() - 0.5) * w.spread;
+      this._fireBullet(a);
+    }
 
     this.scene.cameras.main.flash(30, 255, 220, 80, false);
 
@@ -134,13 +141,13 @@ export default class Player {
     });
 
     this.canShoot = false;
-    this.scene.time.delayedCall(PLAYER.SHOOT_CD_MS, () => { this.canShoot = true; });
+    this.scene.time.delayedCall(this.weaponDef.shootCd, () => { this.canShoot = true; });
     if (this.ammo <= 0) this._startReload();
   }
 
   _handleReloadKey() {
     if (Phaser.Input.Keyboard.JustDown(this.keys.R) &&
-        !this.isReloading && this.ammo < PLAYER.CLIP_SIZE) {
+        !this.isReloading && this.ammo < this.weaponDef.clipSize) {
       this._startReload();
     }
   }
@@ -151,14 +158,26 @@ export default class Player {
     this.canShoot    = false;
     this.scene.events.emit('reload-start');
     this.scene.sound.play('sfx-reload', { volume: 0.55 });
-    this.scene.time.delayedCall(PLAYER.RELOAD_MS, () => {
+    this.scene.time.delayedCall(this.weaponDef.reloadMs, () => {
       if (this.isDead) return;
-      this.ammo = PLAYER.CLIP_SIZE;
+      this.ammo = this.weaponDef.clipSize;
       this.isReloading = false;
       this.canShoot    = true;
       this.scene.events.emit('reload-done');
       this.scene.events.emit('ammo-changed', this.ammo);
     });
+  }
+
+  equipWeapon(key) {
+    if (!(key in WEAPONS)) return;
+    this.weaponKey   = key;
+    this.weaponDef   = WEAPONS[key];
+    this.ammo        = this.weaponDef.clipSize;
+    this.isReloading = false;
+    this.canShoot    = true;
+    this.scene.events.emit('reload-done');
+    this.scene.events.emit('ammo-changed', this.ammo);
+    this.scene.events.emit(EVT.WEAPON_CHANGED, key);
   }
 
   takeDamage(amount) {
@@ -216,7 +235,7 @@ export default class Player {
   }
 
   reloadFull() {
-    this.ammo = PLAYER.CLIP_SIZE;
+    this.ammo = this.weaponDef.clipSize;
     this.isReloading = false;
     this.canShoot    = true;
     this.scene.events.emit('reload-done');

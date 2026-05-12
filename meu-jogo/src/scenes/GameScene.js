@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
 import {
-  GAME, ARENA, COLOR, DEPTH, EVT,
+  GAME, ARENA, COLOR, DEPTH, EVT, MYSTERY_BOX,
   SHEET, KING_FRAMES, CLOWN_FRAMES,
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
+import MysteryBox   from '../systems/MysteryBox.js';
 import HUD          from '../ui/HUD.js';
 
 export default class GameScene extends Phaser.Scene {
@@ -64,9 +65,10 @@ export default class GameScene extends Phaser.Scene {
     this._createAnims();
     this._buildMap();
 
-    this.hud     = new HUD(this);
-    this.player  = new Player(this);
-    this.enemies = new EnemyManager(this);
+    this.hud        = new HUD(this);
+    this.player     = new Player(this);
+    this.enemies    = new EnemyManager(this);
+    this.mysteryBox = new MysteryBox(this);
 
     this.events.on(EVT.ENEMY_KILLED, pts => {
       this.score += pts;
@@ -85,6 +87,13 @@ export default class GameScene extends Phaser.Scene {
     this.enemies.checkBulletHits(this.player.bullets.getChildren());
     this.enemies.applyContactDamage(this.player, delta);
     this.hud.update(this.player.ammo, this.enemies.aliveCount);
+
+    const weapon = this.mysteryBox.update(this.player.x, this.player.y, this.score);
+    if (weapon) {
+      this.score = Math.max(0, this.score - MYSTERY_BOX.COST);
+      this.events.emit('score-changed', this.score);
+      this.player.equipWeapon(weapon);
+    }
 
     if (!this._roundEnding && this.enemies.isRoundComplete()) {
       this._roundEnding = true;

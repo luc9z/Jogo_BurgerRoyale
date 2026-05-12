@@ -60,6 +60,7 @@ export default class GameScene extends Phaser.Scene {
     this.isGameOver   = false;
     this._roundEnding = false;
     this._goShown     = false;
+    this._paused      = false;
 
     this._makeBulletTexture();
     this._createAnims();
@@ -69,6 +70,11 @@ export default class GameScene extends Phaser.Scene {
     this.player     = new Player(this);
     this.enemies    = new EnemyManager(this);
     this.mysteryBox = new MysteryBox(this);
+
+    this._escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+
+    // Quando PauseScene chama scene.resume(), reseta o flag de pause
+    this.events.on('resume', () => { this._paused = false; });
 
     this.events.on(EVT.ENEMY_KILLED, pts => {
       this.score += pts;
@@ -82,6 +88,18 @@ export default class GameScene extends Phaser.Scene {
   // ── UPDATE ───────────────────────────────────────────────
   update(_t, delta) {
     if (this.isGameOver) return;
+
+    if (Phaser.Input.Keyboard.JustDown(this._escKey) && !this._paused) {
+      this._paused = true;
+      this.scene.pause();
+      this.scene.launch('PauseScene', {
+        score:  this.score,
+        round:  this.enemies.round,
+        weapon: this.player.weaponDef.name,
+      });
+      return;
+    }
+
     this.player.update(delta);
     this.enemies.update(this.player.x, this.player.y);
     this.enemies.checkBulletHits(this.player.bullets.getChildren());
@@ -179,6 +197,11 @@ export default class GameScene extends Phaser.Scene {
     this.isGameOver = true;
     this.physics.pause();
 
+    // Salva melhor pontuação
+    const prev = parseInt(localStorage.getItem('burgerRoyale_best') || '0');
+    const isNew = this.score > prev;
+    if (isNew) localStorage.setItem('burgerRoyale_best', String(this.score));
+
     const { WIDTH: W, HEIGHT: H } = GAME;
     const D = DEPTH.OVERLAY;
 
@@ -191,18 +214,32 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#000', strokeThickness: 5,
       });
 
-      this.add.text(W/2, H/2-90, 'GAME OVER',               ps('36px','#ff2200')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-38, 'Os palhaços venceram...', ps('10px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2+0,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('11px','#ffd740')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2+30, `Rounds: ${this.enemies.round}`, ps('9px','#ff8800')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-100, 'GAME OVER',               ps('36px','#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-50,  'Os palhaços venceram...', ps('10px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-16,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('11px','#ffd740')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2+14,  `Rounds: ${this.enemies.round}`, ps('9px','#ff8800')).setOrigin(0.5).setDepth(D+1);
 
-      const btn = this.add.rectangle(W/2, H/2+86, 250, 38, COLOR.WALL)
+      if (isNew) {
+        this.add.text(W/2, H/2+38, 'NOVO RECORDE!', ps('8px','#ffd740')).setOrigin(0.5).setDepth(D+1);
+      }
+
+      // Botão: Jogar novamente
+      const btnPlay = this.add.rectangle(W/2, H/2 + 80, 250, 38, COLOR.WALL)
         .setStrokeStyle(2, COLOR.WALL_GLOW).setDepth(D+1)
         .setInteractive({ useHandCursor: true });
-      this.add.text(W/2, H/2+86, 'JOGAR NOVAMENTE', ps('9px','#ffffff')).setOrigin(0.5).setDepth(D+2);
-      btn.on('pointerover', () => btn.setFillStyle(0xcc2200));
-      btn.on('pointerout',  () => btn.setFillStyle(COLOR.WALL));
-      btn.on('pointerdown', () => this.scene.restart());
+      this.add.text(W/2, H/2+80, 'JOGAR NOVAMENTE', ps('9px','#ffffff')).setOrigin(0.5).setDepth(D+2);
+      btnPlay.on('pointerover', () => btnPlay.setFillStyle(0xcc2200));
+      btnPlay.on('pointerout',  () => btnPlay.setFillStyle(COLOR.WALL));
+      btnPlay.on('pointerdown', () => this.scene.restart());
+
+      // Botão: Menu principal
+      const btnMenu = this.add.rectangle(W/2, H/2 + 128, 250, 38, 0x0c000f)
+        .setStrokeStyle(2, 0x444444).setDepth(D+1)
+        .setInteractive({ useHandCursor: true });
+      this.add.text(W/2, H/2+128, 'MENU PRINCIPAL', ps('9px','#aaaaaa')).setOrigin(0.5).setDepth(D+2);
+      btnMenu.on('pointerover', () => btnMenu.setFillStyle(0x1a001a));
+      btnMenu.on('pointerout',  () => btnMenu.setFillStyle(0x0c000f));
+      btnMenu.on('pointerdown', () => this.scene.start('MenuScene'));
     });
   }
 }

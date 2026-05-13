@@ -35,7 +35,7 @@ export default class Enemy {
     this.shadow = s.add.ellipse(x, y + this._halfH - 6, 38, 12, 0x000000, 0.45)
       .setDepth(DEPTH.SHADOW);
 
-    this.sprite = s.physics.add.sprite(x, y, k)
+    this.sprite = s.physics.add.sprite(x, y, 'clown-frame-idle')
       .setScale(this.scale)
       .setDepth(DEPTH.ENTITY)
       .setAlpha(0);
@@ -43,12 +43,7 @@ export default class Enemy {
     this.sprite.body.setSize(60, 75, true);
     this.sprite.body.setAllowGravity(false);
 
-    // Frame inicial aleatório para não sincronizar múltiplos inimigos
-    const idleFrameCount = 3;
-    this.sprite.play({
-      key: `${k}-idle`,
-      startFrame: Phaser.Math.Between(0, idleFrameCount - 1),
-    });
+    this.sprite.play(`${k}-idle`);
 
     s.tweens.add({ targets: this.sprite, alpha: 1, duration: 280 });
 

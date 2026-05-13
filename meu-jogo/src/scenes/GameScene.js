@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import {
   GAME, ARENA, COLOR, DEPTH, EVT, MYSTERY_BOX,
-  SHEET, KING_FRAMES, CLOWN_FRAMES,
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
@@ -31,17 +30,25 @@ export default class GameScene extends Phaser.Scene {
     this.load.on('progress', v => { bar.width = 300 * v; pct.setText(Math.floor(v*100)+'%'); });
     this.load.on('loaderror', f => console.error('Load error:', f.key, f.src));
 
-    const cfg = { frameWidth: SHEET.FW, frameHeight: SHEET.FH };
+    const kSz = { width: 60, height: 90 };
+    const cSz = { width: 60, height: 90 };
+    const dSz = { width: 90, height: 55 };
 
-    // Rei (jogador) — 3 variantes
-    this.load.spritesheet('king-default', 'assets/sprites/king-default.png', cfg);
-    this.load.spritesheet('king-gold',    'assets/sprites/king-gold.png',    cfg);
-    this.load.spritesheet('king-silver',  'assets/sprites/king-silver.png',  cfg);
+    // Rei (SVG por pose)
+    this.load.svg('king-frame-idle',     'assets/sprites/king-idle.svg',     kSz);
+    this.load.svg('king-frame-walk-a',   'assets/sprites/king-walk-a.svg',   kSz);
+    this.load.svg('king-frame-walk-b',   'assets/sprites/king-walk-b.svg',   kSz);
+    this.load.svg('king-frame-attack',   'assets/sprites/king-attack.svg',   { width: 70, height: 90 });
+    this.load.svg('king-frame-hurt',     'assets/sprites/king-hurt.svg',     kSz);
+    this.load.svg('king-frame-dead',     'assets/sprites/king-dead.svg',     dSz);
 
-    // Palhaços (inimigos) — 3 variantes
-    this.load.spritesheet('clown',        'assets/sprites/clown.png',        cfg);
-    this.load.spritesheet('clown-fat',    'assets/sprites/clown-fat.png',    cfg);
-    this.load.spritesheet('clown-skinny', 'assets/sprites/clown-skinny.png', cfg);
+    // Palhaço (SVG por pose — escala diferencia gordinho/magrinho)
+    this.load.svg('clown-frame-idle',    'assets/sprites/clown-idle.svg',    cSz);
+    this.load.svg('clown-frame-walk-a',  'assets/sprites/clown-walk-a.svg',  cSz);
+    this.load.svg('clown-frame-walk-b',  'assets/sprites/clown-walk-b.svg',  cSz);
+    this.load.svg('clown-frame-attack',  'assets/sprites/clown-attack.svg',  { width: 70, height: 90 });
+    this.load.svg('clown-frame-hurt',    'assets/sprites/clown-hurt.svg',    cSz);
+    this.load.svg('clown-frame-dead',    'assets/sprites/clown-dead.svg',    dSz);
 
     this.load.image('background', 'assets/sprites/background.png');
 
@@ -141,25 +148,25 @@ export default class GameScene extends Phaser.Scene {
   _createAnims() {
     const a  = this.anims;
     const mk = cfg => { if (!a.exists(cfg.key)) a.create(cfg); };
+    const f1 = k       => [{ key: k }];
+    const f2 = (ka,kb) => [{ key: ka }, { key: kb }];
 
-    const frames = (key, arr) => a.generateFrameNumbers(key, { frames: arr });
-
-    // ── Rei (todas variantes compartilham os mesmos índices) ──
+    // Rei — todas variantes usam os mesmos frames SVG
     for (const king of ['king-default', 'king-gold', 'king-silver']) {
-      mk({ key: `${king}-idle`,   frames: frames(king, KING_FRAMES.IDLE),   frameRate: 4,  repeat: -1 });
-      mk({ key: `${king}-walk`,   frames: frames(king, KING_FRAMES.WALK),   frameRate: 8,  repeat: -1 });
-      mk({ key: `${king}-attack`, frames: frames(king, KING_FRAMES.ATTACK), frameRate: 14, repeat: 0  });
-      mk({ key: `${king}-hurt`,   frames: frames(king, KING_FRAMES.HURT),   frameRate: 10, repeat: 0  });
-      mk({ key: `${king}-death`,  frames: frames(king, KING_FRAMES.DEATH),  frameRate: 7,  repeat: 0  });
+      mk({ key: `${king}-idle`,   frames: f1('king-frame-idle'),                         frameRate: 4,  repeat: -1 });
+      mk({ key: `${king}-walk`,   frames: f2('king-frame-walk-a','king-frame-walk-b'),   frameRate: 8,  repeat: -1 });
+      mk({ key: `${king}-attack`, frames: f1('king-frame-attack'),                       frameRate: 14, repeat: 0  });
+      mk({ key: `${king}-hurt`,   frames: f1('king-frame-hurt'),                         frameRate: 10, repeat: 0  });
+      mk({ key: `${king}-death`,  frames: f1('king-frame-dead'),                         frameRate: 7,  repeat: 0  });
     }
 
-    // ── Palhaços (todas variantes compartilham os mesmos índices) ──
+    // Palhaços — escala diferencia gordinho/magrinho, frames SVG são os mesmos
     for (const clown of ['clown', 'clown-fat', 'clown-skinny']) {
-      mk({ key: `${clown}-idle`,   frames: frames(clown, CLOWN_FRAMES.IDLE),   frameRate: 5,  repeat: -1 });
-      mk({ key: `${clown}-walk`,   frames: frames(clown, CLOWN_FRAMES.WALK),   frameRate: 8,  repeat: -1 });
-      mk({ key: `${clown}-attack`, frames: frames(clown, CLOWN_FRAMES.ATTACK), frameRate: 10, repeat: 0  });
-      mk({ key: `${clown}-hurt`,   frames: frames(clown, CLOWN_FRAMES.HURT),   frameRate: 10, repeat: 0  });
-      mk({ key: `${clown}-death`,  frames: frames(clown, CLOWN_FRAMES.DEATH),  frameRate: 7,  repeat: 0  });
+      mk({ key: `${clown}-idle`,   frames: f1('clown-frame-idle'),                          frameRate: 5,  repeat: -1 });
+      mk({ key: `${clown}-walk`,   frames: f2('clown-frame-walk-a','clown-frame-walk-b'),   frameRate: 8,  repeat: -1 });
+      mk({ key: `${clown}-attack`, frames: f1('clown-frame-attack'),                        frameRate: 10, repeat: 0  });
+      mk({ key: `${clown}-hurt`,   frames: f1('clown-frame-hurt'),                          frameRate: 10, repeat: 0  });
+      mk({ key: `${clown}-death`,  frames: f1('clown-frame-dead'),                          frameRate: 7,  repeat: 0  });
     }
   }
 

@@ -39,7 +39,7 @@ export default class Player {
     this.shadow = s.add.ellipse(cx, cy + this._halfH - 4, 42, 12, 0x000000, 0.5)
       .setDepth(DEPTH.SHADOW);
 
-    this.sprite = s.physics.add.sprite(cx, cy, SKIN)
+    this.sprite = s.physics.add.sprite(cx, cy, 'king-frame-idle')
       .setScale(PLAYER.SCALE)
       .setDepth(DEPTH.ENTITY)
       .setCollideWorldBounds(true);

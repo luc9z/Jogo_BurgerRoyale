@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import Enemy from '../entities/Enemy.js';
-import { GAME, ARENA, ROUND, ENEMY, BULLET, EVT } from '../constants.js';
+import { GAME, ARENA, ROUND, ENEMY, BULLET, EVT, ENEMY_TYPES } from '../constants.js';
 
 export default class EnemyManager {
   constructor(scene) {
@@ -33,14 +33,29 @@ export default class EnemyManager {
   }
 
   _spawnWave(total) {
-    let spawned = 0;
+    let spawned    = 0;
+    const isBoss   = this.round % 5 === 0;
+    const spawnMs  = Math.max(160, ROUND.SPAWN_MS - (this.round - 1) * 28);
+
+    if (isBoss) {
+      this.scene.events.emit('show-boss-warning');
+    }
+
     const next = () => {
       if (spawned >= total) return;
-      this._spawnOne();
+      if (spawned === 0 && isBoss) this._spawnBoss();
+      else this._spawnOne();
       spawned++;
-      this.scene.time.delayedCall(ROUND.SPAWN_MS, next);
+      this.scene.time.delayedCall(spawnMs, next);
     };
     next();
+  }
+
+  _spawnBoss() {
+    this._spawnLeft = Math.max(0, this._spawnLeft - 1);
+    const bx = ARENA.X + ARENA.W / 2;
+    const by = ARENA.Y + 90;
+    this.enemies.push(new Enemy(this.scene, bx, by, this.round, 'clown-boss'));
   }
 
   _pickType() {
@@ -88,6 +103,38 @@ export default class EnemyManager {
 
     for (const e of this.enemies) {
       if (!e.isDead) e.update(tx, ty);
+    }
+
+    this._applySeparation();
+  }
+
+  _applySeparation() {
+    const SEP_DIST = 56;
+    const FORCE    = 115;
+    const alive    = this.enemies.filter(e => !e.isDead);
+
+    for (let i = 0; i < alive.length; i++) {
+      const a = alive[i];
+      if (!a.sprite?.body) continue;
+      let fx = 0, fy = 0;
+
+      for (let j = 0; j < alive.length; j++) {
+        if (i === j) continue;
+        const b  = alive[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const d  = Math.hypot(dx, dy);
+        if (d < SEP_DIST && d > 0.5) {
+          const str = (SEP_DIST - d) / SEP_DIST;
+          fx += (dx / d) * FORCE * str;
+          fy += (dy / d) * FORCE * str;
+        }
+      }
+
+      if (fx !== 0 || fy !== 0) {
+        const v = a.sprite.body.velocity;
+        a.sprite.body.setVelocity(v.x + fx, v.y + fy);
+      }
     }
   }
 

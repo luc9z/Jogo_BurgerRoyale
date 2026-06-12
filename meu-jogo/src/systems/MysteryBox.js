@@ -1,10 +1,10 @@
 import Phaser from 'phaser';
 import { ARENA, DEPTH, MYSTERY_BOX, WEAPONS } from '../constants.js';
 
-const WEAPON_KEYS = Object.keys(WEAPONS).filter(k => k !== 'pistol');
+const WEAPON_KEYS = Object.keys(WEAPONS).filter(k => !WEAPONS[k].isMelee && k !== 'pistol');
 
 const WEAPON_COLOR = {
-  pistol:     0xffe060,
+  revolver:   0xcc6600,
   shotgun:    0xff6600,
   machinegun: 0x44ffaa,
   sniper:     0x00aaff,

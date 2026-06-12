@@ -1,21 +1,28 @@
 import Phaser from 'phaser';
-import { PLAYER, ARENA, DEPTH, EVT, WEAPONS } from '../constants.js';
+import { PLAYER, ARENA, DEPTH, EVT, WEAPONS, SVG_H } from '../constants.js';
 
 const SKIN = 'king-default';
+
+// Estilo visual de cada arma (desenhado como retângulo rotacionado)
+const GUN_STYLE = {
+  pistol:     { len: 16, hw: 2.5, col: 0x999999, off: 14 },
+  revolver:   { len: 21, hw: 3.0, col: 0xaa8833, off: 13 },
+  shotgun:    { len: 17, hw: 5.0, col: 0x885522, off: 11 },
+  machinegun: { len: 27, hw: 2.5, col: 0x44aa55, off: 13 },
+  sniper:     { len: 35, hw: 1.8, col: 0x4488cc, off: 13 },
+};
 
 export default class Player {
   constructor(scene) {
     this.scene = scene;
 
-    // ── Sistema de 2 slots ─────────────────────────────────
-    this.slots      = ['knife', null]; // slot 0 = faca, slot 1 = arma do box
-    this.slotAmmo   = [-1, 0];        // -1 = infinito (faca)
-    this.activeSlot = 0;
+    this.weaponKey  = 'pistol';
+    this.weaponDef  = WEAPONS.pistol;
+    this.ammo       = WEAPONS.pistol.clipSize;
     this._reloadId  = 0;
-
-    this.weaponKey  = 'knife';
-    this.weaponDef  = WEAPONS.knife;
-    this.ammo       = -1;
+    this._speedBonus  = 0;
+    this._damageMult  = 1.0;
+    this._reloadMult  = 1.0;
 
     this.isReloading  = false;
     this.canShoot     = true;
@@ -25,6 +32,7 @@ export default class Player {
     this.hearts       = PLAYER.MAX_HEARTS;
     this.lastDir      = new Phaser.Math.Vector2(1, 0);
     this._attackLock  = false;
+    this._mouseDown   = false;
 
     this._create();
     this._buildControls();
@@ -35,7 +43,7 @@ export default class Player {
     const cx = ARENA.X + ARENA.W / 2;
     const cy = ARENA.Y + ARENA.H / 2;
 
-    this._halfH = Math.round((100 * PLAYER.SCALE) / 2);
+    this._halfH = Math.round((SVG_H * PLAYER.SCALE) / 2);
     this.shadow = s.add.ellipse(cx, cy + this._halfH - 4, 42, 12, 0x000000, 0.5)
       .setDepth(DEPTH.SHADOW);
 
@@ -48,55 +56,121 @@ export default class Player {
     this.sprite.body.setAllowGravity(false);
     this.sprite.play(`${SKIN}-idle`);
 
-    this.bullets = s.physics.add.group({ allowGravity: false });
+    this.bullets  = s.physics.add.group({ allowGravity: false });
+    this._gunGfx  = s.add.graphics().setDepth(DEPTH.ENTITY + 1);
 
     s.events.emit('hearts-changed', this.hearts);
-    s.events.emit('ammo-changed', this.ammo);
-    s.events.emit('slots-changed', [...this.slots], this.activeSlot);
+    s.events.emit('ammo-changed',   this.ammo);
+    s.events.emit(EVT.WEAPON_CHANGED, this.weaponKey);
   }
 
   _buildControls() {
     const s = this.scene;
     this.cursors = s.input.keyboard.createCursorKeys();
     this.keys    = s.input.keyboard.addKeys({
-      W:     Phaser.Input.Keyboard.KeyCodes.W,
-      A:     Phaser.Input.Keyboard.KeyCodes.A,
-      S:     Phaser.Input.Keyboard.KeyCodes.S,
-      D:     Phaser.Input.Keyboard.KeyCodes.D,
-      SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
-      R:     Phaser.Input.Keyboard.KeyCodes.R,
-      Q:     Phaser.Input.Keyboard.KeyCodes.Q,
+      W: Phaser.Input.Keyboard.KeyCodes.W,
+      A: Phaser.Input.Keyboard.KeyCodes.A,
+      S: Phaser.Input.Keyboard.KeyCodes.S,
+      D: Phaser.Input.Keyboard.KeyCodes.D,
+      R: Phaser.Input.Keyboard.KeyCodes.R,
+    });
+
+    // Cursor oculto + crosshair customizado
+    s.input.setDefaultCursor('none');
+
+    const g = s.add.graphics().setDepth(DEPTH.HUD + 10);
+    g.lineStyle(2, 0xffffff, 0.92);
+    g.strokeCircle(0, 0, 13);
+    g.lineBetween(-22, 0, -15, 0);
+    g.lineBetween(15, 0, 22, 0);
+    g.lineBetween(0, -22, 0, -15);
+    g.lineBetween(0, 15, 0, 22);
+    g.lineStyle(1.5, 0xff3300, 0.95);
+    g.strokeCircle(0, 0, 2.5);
+    this._crosshair = g;
+
+    // window.addEventListener detecta mouse mesmo fora do canvas
+    const onDown = e => { if (e.button === 0) this._mouseDown = true; };
+    const onUp   = e => { if (e.button === 0) this._mouseDown = false; };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('mouseup',   onUp);
+    s.events.once('shutdown', () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup',   onUp);
+      this._mouseDown = false;
     });
   }
 
   update(_delta) {
     if (this.isDead) return;
+    this._updateAim();
     this._move();
-    this._handleSwitch();
     this._handleShoot();
     this._handleReloadKey();
     this.shadow.setPosition(this.sprite.x, this.sprite.y + this._halfH - 4);
+    this._drawGun();
+  }
+
+  // Mira e crosshair seguem o mouse (ptr.x = coord do jogo)
+  _updateAim() {
+    const ptr = this.scene.input.activePointer;
+    const mx  = ptr.x;
+    const my  = ptr.y;
+    this._crosshair.setPosition(mx, my);
+    const dx   = mx - this.sprite.x;
+    const dy   = my - this.sprite.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 10) {
+      this.lastDir.set(dx / dist, dy / dist);
+      if (!this._attackLock) this.sprite.setFlipX(dx < 0);
+    }
+  }
+
+  // Desenha a arma como retângulo rotacionado na direção da mira
+  _drawGun() {
+    const g = this._gunGfx;
+    g.clear();
+    const st = GUN_STYLE[this.weaponKey];
+    if (!st) return;
+
+    const px    = this.sprite.x, py = this.sprite.y;
+    const angle = Math.atan2(this.lastDir.y, this.lastDir.x);
+    const cos   = Math.cos(angle), sin = Math.sin(angle);
+    const pcos  = -sin, psin = cos; // perpendicular
+
+    const ox = px + cos * st.off, oy = py + sin * st.off;
+
+    const x1 = ox + pcos * st.hw,              y1 = oy + psin * st.hw;
+    const x2 = ox + cos * st.len + pcos * st.hw, y2 = oy + sin * st.len + psin * st.hw;
+    const x3 = ox + cos * st.len - pcos * st.hw, y3 = oy + sin * st.len - psin * st.hw;
+    const x4 = ox - pcos * st.hw,              y4 = oy - psin * st.hw;
+
+    g.fillStyle(st.col, 1);
+    g.fillTriangle(x1, y1, x2, y2, x3, y3);
+    g.fillTriangle(x1, y1, x3, y3, x4, y4);
+
+    // Brilho no cano ao atirar
+    if (this._attackLock) {
+      g.fillStyle(0xffee55, 0.75);
+      g.fillCircle(ox + cos * st.len, oy + sin * st.len, 4);
+    }
   }
 
   // ── MOVIMENTO ─────────────────────────────────────────────
   _move() {
     const { cursors, keys, sprite } = this;
     let vx = 0, vy = 0;
+    const speed = PLAYER.SPEED + this._speedBonus;
 
-    if (cursors.left.isDown  || keys.A.isDown) vx = -PLAYER.SPEED;
-    if (cursors.right.isDown || keys.D.isDown) vx =  PLAYER.SPEED;
-    if (cursors.up.isDown    || keys.W.isDown) vy = -PLAYER.SPEED;
-    if (cursors.down.isDown  || keys.S.isDown) vy =  PLAYER.SPEED;
+    if (cursors.left.isDown  || keys.A.isDown) vx = -speed;
+    if (cursors.right.isDown || keys.D.isDown) vx =  speed;
+    if (cursors.up.isDown    || keys.W.isDown) vy = -speed;
+    if (cursors.down.isDown  || keys.S.isDown) vy =  speed;
 
     if (vx !== 0 && vy !== 0) { vx *= 0.7071; vy *= 0.7071; }
 
     sprite.setVelocity(vx, vy);
     this.isMoving = (vx !== 0 || vy !== 0);
-
-    if (this.isMoving) {
-      this.lastDir.set(vx, vy).normalize();
-      sprite.setFlipX(vx < 0);
-    }
 
     if (!this._attackLock) {
       const anim = this.isMoving ? `${SKIN}-walk` : `${SKIN}-idle`;
@@ -104,39 +178,10 @@ export default class Player {
     }
   }
 
-  // ── TROCA DE SLOT (Q) ──────────────────────────────────────
-  _handleSwitch() {
-    if (!Phaser.Input.Keyboard.JustDown(this.keys.Q)) return;
-    const other = 1 - this.activeSlot;
-    if (this.slots[other] === null) return; // slot vazio, não troca
-
-    // Salva ammo do slot atual
-    this.slotAmmo[this.activeSlot] = this.ammo;
-    this._reloadId++; // cancela reload pendente
-
-    // Ativa o outro slot
-    this.activeSlot = other;
-    this.weaponKey  = this.slots[this.activeSlot];
-    this.weaponDef  = WEAPONS[this.weaponKey];
-    this.ammo       = this.slotAmmo[this.activeSlot];
-    this.isReloading = false;
-    this.canShoot    = true;
-
-    this.scene.events.emit('reload-done');
-    this.scene.events.emit('ammo-changed', this.ammo);
-    this.scene.events.emit(EVT.WEAPON_CHANGED, this.weaponKey);
-    this.scene.events.emit('slots-changed', [...this.slots], this.activeSlot);
-  }
-
-  // ── DISPARO / ATAQUE ──────────────────────────────────────
+  // ── DISPARO ──────────────────────────────────────────────
   _handleShoot() {
-    if (!Phaser.Input.Keyboard.JustDown(this.keys.SPACE)) return;
+    if (!this._mouseDown) return;
     if (!this.canShoot || this.isReloading || this.isDead) return;
-
-    if (this.weaponDef.isMelee) {
-      this._meleeAttack();
-      return;
-    }
 
     if (this.ammo <= 0) { this._startReload(); return; }
 
@@ -167,44 +212,6 @@ export default class Player {
     if (this.ammo <= 0) this._startReload();
   }
 
-  // ── ATAQUE CORPO A CORPO ──────────────────────────────────
-  _meleeAttack() {
-    this.canShoot    = false;
-    this._attackLock = true;
-
-    this.sprite.play(`${SKIN}-attack`, true);
-    this.scene.sound.play('sfx-shoot', { volume: 0.4, detune: -600 });
-
-    // Verifica todos os inimigos dentro do range
-    const range   = this.weaponDef.range;
-    const enemies = this.scene.enemies?.enemies ?? [];
-    let hitAny    = false;
-
-    for (const e of enemies) {
-      if (e.isDead) continue;
-      const d = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, e.x, e.y);
-      if (d < range) {
-        const dx  = e.x - this.sprite.x, dy = e.y - this.sprite.y;
-        const len = Math.hypot(dx, dy) || 1;
-        e.takeDamage(this.weaponDef.damage, { x: dx / len, y: dy / len });
-        if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, e.points);
-        hitAny = true;
-      }
-    }
-
-    if (hitAny) this.scene.cameras.main.flash(25, 255, 180, 0, false);
-
-    this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
-      this._attackLock = false;
-      if (!this.isDead) {
-        if (this.isMoving) this.sprite.play(`${SKIN}-walk`, true);
-        else               this.sprite.play(`${SKIN}-idle`, true);
-      }
-    });
-
-    this.scene.time.delayedCall(this.weaponDef.shootCd, () => { this.canShoot = true; });
-  }
-
   // ── BALA ──────────────────────────────────────────────────
   _fireBullet(angleRad) {
     const w  = this.weaponDef;
@@ -220,7 +227,7 @@ export default class Player {
     bullet._ox     = bx;
     bullet._oy     = by;
     bullet._range  = w.range;
-    bullet._damage = w.damage;
+    bullet._damage = Math.round(w.damage * this._damageMult);
   }
 
   // ── RECARGA ───────────────────────────────────────────────
@@ -240,9 +247,10 @@ export default class Player {
     this.scene.sound.play('sfx-reload', { volume: 0.55 });
 
     const id = ++this._reloadId;
-    this.scene.time.delayedCall(this.weaponDef.reloadMs, () => {
-      if (this.isDead || this._reloadId !== id) return; // cancelado por troca de slot
-      this.ammo = this.weaponDef.clipSize;
+    const reloadMs = Math.round(this.weaponDef.reloadMs * this._reloadMult);
+    this.scene.time.delayedCall(reloadMs, () => {
+      if (this.isDead || this._reloadId !== id) return;
+      this.ammo        = this.weaponDef.clipSize;
       this.isReloading = false;
       this.canShoot    = true;
       this.scene.events.emit('reload-done');
@@ -250,31 +258,35 @@ export default class Player {
     });
   }
 
-  // ── EQUIPAR ARMA (mystery box) ────────────────────────────
-  equipWeapon(key) {
-    if (!(key in WEAPONS) || WEAPONS[key].isMelee) return;
-
-    // Salva ammo do slot atual e cancela reload
-    this.slotAmmo[this.activeSlot] = this.ammo;
+  // ── TROCA DE ARMA (por upgrade) ───────────────────────────
+  changeWeapon(key) {
+    if (!(key in WEAPONS)) return;
     this._reloadId++;
-
-    // Arma do box sempre vai pro slot 1
-    this.slots[1]    = key;
-    this.slotAmmo[1] = WEAPONS[key].clipSize;
-
-    // Auto-troca pro slot 1
-    this.activeSlot  = 1;
     this.weaponKey   = key;
     this.weaponDef   = WEAPONS[key];
-    this.ammo        = this.slotAmmo[1];
+    this.ammo        = WEAPONS[key].isMelee ? -1 : WEAPONS[key].clipSize;
     this.isReloading = false;
     this.canShoot    = true;
-
     this.scene.events.emit('reload-done');
     this.scene.events.emit('ammo-changed', this.ammo);
     this.scene.events.emit(EVT.WEAPON_CHANGED, key);
-    this.scene.events.emit('slots-changed', [...this.slots], this.activeSlot);
   }
+
+  // Compatibilidade com código legado (mystery box removida mas por segurança)
+  equipWeapon(key) { this.changeWeapon(key); }
+
+  // ── CURA ──────────────────────────────────────────────────
+  heal() {
+    if (this.isDead || this.hearts >= PLAYER.MAX_HEARTS) return;
+    this.hearts = Math.min(PLAYER.MAX_HEARTS, this.hearts + 1);
+    this.scene.events.emit('hearts-changed', this.hearts);
+    this.scene.cameras.main.flash(90, 0, 200, 0, false);
+  }
+
+  // ── BÔNUS DE UPGRADES ────────────────────────────────────
+  addSpeedBonus(amount)  { this._speedBonus = Math.min(this._speedBonus + amount, 120); }
+  addDamageBonus(pct)    { this._damageMult = Math.min(this._damageMult + pct, 3.0); }
+  addReloadBonus(pct)    { this._reloadMult = Math.max(this._reloadMult - pct, 0.30); }
 
   // ── DANO ──────────────────────────────────────────────────
   takeDamage(hearts = 1) {
@@ -314,6 +326,13 @@ export default class Player {
     if (this.isDead) return;
     this.isDead = true;
     this._attackLock = false;
+    this._mouseDown  = false;
+
+    // Restaura cursor para o game over
+    this.scene.input.setDefaultCursor('default');
+    this._crosshair.setVisible(false);
+    this._gunGfx.clear();
+
     this.sprite.setVelocity(0, 0);
     this.sprite.clearTint();
     this.sprite.play(`${SKIN}-death`, true);

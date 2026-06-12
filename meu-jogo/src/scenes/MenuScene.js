@@ -135,7 +135,7 @@ export default class MenuScene extends Phaser.Scene {
 
     const items = [
       ['WASD', 'mover'],
-      ['ESPAÇO', 'atirar'],
+      ['MOUSE1', 'atirar'],
       ['R', 'recarregar'],
       ['E', 'mystery box'],
       ['ESC', 'pausar'],

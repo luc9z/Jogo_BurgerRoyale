@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ENEMY, ENEMY_TYPES, DEPTH } from '../constants.js';
+import { ENEMY, ENEMY_TYPES, DEPTH, SVG_H } from '../constants.js';
 
 const HP_BAR_W = 40;
 
@@ -23,6 +23,7 @@ export default class Enemy {
     );
     this.points = Math.round(ENEMY.POINTS * def.pointsMult);
 
+    this._driftOffset = Math.random() * Math.PI * 2;
     this._create(x, y);
   }
 
@@ -30,7 +31,7 @@ export default class Enemy {
     const s = this.scene;
     const k = this.key;
 
-    this._halfH = Math.round((100 * this.scale) / 2);
+    this._halfH = Math.round((SVG_H * this.scale) / 2);
 
     this.shadow = s.add.ellipse(x, y + this._halfH - 6, 38, 12, 0x000000, 0.45)
       .setDepth(DEPTH.SHADOW);
@@ -66,7 +67,10 @@ export default class Enemy {
     const dist = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, tx, ty);
 
     if (dist > 5) {
-      const angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, tx, ty);
+      const baseAngle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, tx, ty);
+      // Drift leve para flanquear — cada inimigo tem fase diferente
+      const drift = Math.sin(this.scene.time.now * 0.0012 + this._driftOffset) * 0.22;
+      const angle = baseAngle + drift;
       this.sprite.setVelocity(
         Math.cos(angle) * this.speed,
         Math.sin(angle) * this.speed,
@@ -140,6 +144,7 @@ export default class Enemy {
 
     this._deathFX();
     this._pointsText();
+    this._tryDropHeal();
 
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this._cleanup());
     this.scene.time.delayedCall(2000, () => this._cleanup());
@@ -164,6 +169,17 @@ export default class Enemy {
       g.fillCircle(x + Math.cos(a) * d, y + Math.sin(a) * d, this.type === 'clown-fat' ? 5 : 3);
     }
     this.scene.time.delayedCall(280, () => g.destroy());
+  }
+
+  _tryDropHeal() {
+    const chance = this.type === 'clown-boss' ? 1.0
+                 : this.type === 'clown-fat'  ? 0.38
+                 : 0.07;
+    if (Math.random() >= chance) return;
+    const dx = this.sprite.x, dy = this.sprite.y;
+    this.scene.time.delayedCall(320, () => {
+      this.scene.events.emit('drop-heal', dx, dy);
+    });
   }
 
   _pointsText() {

@@ -11,6 +11,9 @@ export default class GameScene extends Phaser.Scene {
 
   // ── PRELOAD ──────────────────────────────────────────────
   preload() {
+    // Na segunda execução (restart), assets já estão em cache — pula o preload
+    if (this.textures.exists('king-frame-idle')) return;
+
     const { WIDTH: W, HEIGHT: H } = GAME;
     this.add.rectangle(W/2, H/2, W, H, 0x08000d);
     this.add.text(W/2, H/2 - 36, 'BURGER ROYALE', {
@@ -365,9 +368,9 @@ export default class GameScene extends Phaser.Scene {
       };
 
       mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, () => {
-        this.scene.stop('UpgradeScene');
-        this.scene.stop('PauseScene');
-        this.scene.restart();
+        if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
+        if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
+        this.scene.start('GameScene');
       });
       mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555, () => {
         this.scene.stop('UpgradeScene');

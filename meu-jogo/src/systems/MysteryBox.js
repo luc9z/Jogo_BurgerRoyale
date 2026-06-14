@@ -80,12 +80,15 @@ export default class MysteryBox {
   _flash(color) {
     const s = this.scene;
     let tog = false;
-    const iv = setInterval(() => {
-      this._box.setStrokeStyle(3, tog ? color : 0xffd740);
-      tog = !tog;
-    }, 80);
+    const ev = s.time.addEvent({
+      delay: 80, repeat: 7,
+      callback: () => {
+        if (this._box?.active) this._box.setStrokeStyle(3, tog ? color : 0xffd740);
+        tog = !tog;
+      },
+    });
     s.time.delayedCall(600, () => {
-      clearInterval(iv);
+      ev.remove(false);
       if (this._box?.active) this._box.setStrokeStyle(3, 0xffd740);
     });
   }

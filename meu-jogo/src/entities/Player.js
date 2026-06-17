@@ -231,13 +231,15 @@ export default class Player {
     if (this._attackLock) {
       const mx2 = ox + cos*(st.bodyLen + st.barrelLen);
       const my2 = oy + sin*(st.bodyLen + st.barrelLen);
-      g.fillStyle(0xffee44, 0.92);
+      const fc  = this.weaponKey === 'laser' ? 0x00ffee : 0xffee44;
+      const fc2 = this.weaponKey === 'laser' ? 0x00cccc : 0xffcc22;
+      g.fillStyle(fc, 0.92);
       g.fillCircle(mx2, my2, 6);
       g.fillStyle(0xffffff, 0.75);
       g.fillCircle(mx2, my2, 2.5);
       for (let i = 0; i < 4; i++) {
         const ra = angle + (i * Math.PI / 2) + Math.PI / 4;
-        g.lineStyle(1.5, 0xffcc22, 0.5);
+        g.lineStyle(1.5, fc2, 0.5);
         g.lineBetween(mx2, my2, mx2 + Math.cos(ra)*10, my2 + Math.sin(ra)*10);
       }
     }
@@ -301,6 +303,8 @@ export default class Player {
 
   // ── BALA ──────────────────────────────────────────────────
   _fireBullet(angleRad) {
+    if (this.weaponKey === 'laser') { this._fireLaser(angleRad); return; }
+
     const w  = this.weaponDef;
     const bx = this.sprite.x + Math.cos(angleRad) * 30;
     const by = this.sprite.y + Math.sin(angleRad) * 30;
@@ -315,6 +319,55 @@ export default class Player {
     bullet._oy     = by;
     bullet._range  = w.range;
     bullet._damage = Math.round(w.damage * this._damageMult);
+  }
+
+  _fireLaser(angleRad) {
+    const w   = this.weaponDef;
+    const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
+    const st  = GUN_STYLE.laser;
+    // Origem no cano da arma
+    const bx  = this.sprite.x + cos * (st.off + st.bodyLen + st.barrelLen);
+    const by  = this.sprite.y + sin * (st.off + st.bodyLen + st.barrelLen);
+
+    // Hitscan — acha o inimigo mais próximo ao longo do raio
+    const damage = Math.round(w.damage * this._damageMult);
+    let hitDist  = w.range;
+    let hitEnemy = null;
+
+    for (const e of (this.scene.enemies?.enemies ?? [])) {
+      if (e.isDead) continue;
+      const dx = e.x - bx, dy = e.y - by;
+      const t  = dx * cos + dy * sin;
+      if (t < 0 || t > hitDist) continue;
+      const perp = Math.abs(dx * sin - dy * cos);
+      if (perp < 32) { hitDist = t; hitEnemy = e; }
+    }
+
+    const ex = bx + cos * hitDist;
+    const ey = by + sin * hitDist;
+
+    // Desenha o feixe
+    const g = this.scene.add.graphics().setDepth(DEPTH.BULLET);
+    g.lineStyle(10, 0x00ffee, 0.18);
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+    g.lineStyle(4,  0x00ffee, 0.70);
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+    g.lineStyle(1.5, 0xffffff, 0.95);
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(ex, ey); g.strokePath();
+
+    // Flash de impacto
+    g.fillStyle(0x00ffee, 0.85); g.fillCircle(ex, ey, 10);
+    g.fillStyle(0xffffff,  0.9); g.fillCircle(ex, ey, 4);
+
+    this.scene.tweens.add({
+      targets: g, alpha: 0, duration: 180, ease: 'Quad.easeIn',
+      onComplete: () => g.destroy(),
+    });
+
+    if (hitEnemy) {
+      hitEnemy.takeDamage(damage, { x: cos, y: sin });
+      if (hitEnemy.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, hitEnemy.points);
+    }
   }
 
   // ── RECARGA ───────────────────────────────────────────────

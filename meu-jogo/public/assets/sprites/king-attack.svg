@@ -1,32 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="70" height="90" viewBox="0 0 70 90">
-  <g class="cape-wave"><rect x="16" y="36" width="32" height="28" rx="4" fill="#8B0000" opacity="0.85"/></g>
-  <rect x="20" y="34" width="24" height="26" rx="4" fill="#D4A017"/>
-  <ellipse cx="32" cy="45" rx="7" ry="5" fill="#E8300B"/>
-  <rect x="28" y="28" width="8" height="8" rx="2" fill="#C8956C"/>
-  <rect x="19" y="10" width="26" height="22" rx="8" fill="#C8956C"/>
-  <rect x="18" y="6" width="28" height="8" rx="2" fill="#FFD700" stroke="#B8860B" stroke-width="0.5"/>
-  <polygon points="18,6 22,0 26,6" fill="#FFD700"/>
-  <polygon points="29,6 32,1 35,6" fill="#FFD700"/>
-  <polygon points="38,6 42,0 46,6" fill="#FFD700"/>
-  <circle cx="22" cy="3" r="1.5" fill="#E8300B"/>
-  <circle cx="32" cy="2" r="1.5" fill="#E8300B"/>
-  <circle cx="42" cy="3" r="1.5" fill="#E8300B"/>
-  <ellipse cx="26" cy="18" rx="3" ry="3" fill="white"/>
-  <ellipse cx="38" cy="18" rx="3" ry="3" fill="white"/>
-  <circle cx="26" cy="18" r="1.5" fill="#3A2000"/>
-  <circle cx="38" cy="18" r="1.5" fill="#3A2000"/>
-  <line x1="23" y1="15" x2="29" y2="14" stroke="#3A2000" stroke-width="1.5"/>
-  <line x1="35" y1="14" x2="41" y2="15" stroke="#3A2000" stroke-width="1.5"/>
-  <path d="M22 26 Q32 32 42 26" stroke="#8B4513" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-  <rect x="10" y="36" width="10" height="5" rx="2" fill="#D4A017"/>
-  <rect x="8" y="39" width="7" height="10" rx="3" fill="#C8956C"/>
-  <g transform="rotate(20,54,37)">
-    <rect x="44" y="34" width="10" height="5" rx="2" fill="#D4A017"/>
-    <rect x="50" y="36" width="7" height="8" rx="3" fill="#C8956C"/>
-    <rect x="54" y="37" width="14" height="6" rx="2" fill="#333"/>
-    <rect x="62" y="35" width="4" height="4" rx="1" fill="#555"/>
-    <polygon points="68,40 73,37 73,43" fill="#FFD700" opacity="0.9"/>
+  <defs>
+    <linearGradient id="kgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
+    <linearGradient id="kskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2CDA4"/><stop offset="1" stop-color="#C8956C"/></linearGradient>
+    <linearGradient id="kcape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C42020"/><stop offset="1" stop-color="#6E0000"/></linearGradient>
+    <linearGradient id="kbeard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B0743A"/><stop offset="1" stop-color="#5A3010"/></linearGradient>
+    <radialGradient id="kgem" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FF7A5A"/><stop offset="1" stop-color="#B81000"/></radialGradient>
+    <radialGradient id="kflash" cx="0.5" cy="0.5"><stop offset="0" stop-color="#FFF7C0"/><stop offset="0.5" stop-color="#FFC830"/><stop offset="1" stop-color="#FF6A00" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g stroke="#3A1E00" stroke-width="0.7" stroke-linejoin="round">
+    <rect x="16" y="36" width="32" height="28" rx="6" fill="url(#kcape)"/>
+    <rect x="20" y="34" width="24" height="26" rx="5" fill="url(#kgold)"/>
+    <ellipse cx="32" cy="45" rx="7" ry="5.5" fill="url(#kgem)"/>
+    <ellipse cx="30" cy="43" rx="2" ry="1.4" fill="#FFFFFF" opacity="0.7" stroke="none"/>
+    <rect x="28" y="28" width="8" height="8" rx="2" fill="url(#kskin)"/>
+    <rect x="19" y="10" width="26" height="22" rx="9" fill="url(#kskin)"/>
+    <rect x="18" y="5" width="28" height="9" rx="2" fill="url(#kgold)"/>
+    <polygon points="18,6 22,-1 26,6" fill="url(#kgold)"/>
+    <polygon points="29,6 32,0 35,6" fill="url(#kgold)"/>
+    <polygon points="38,6 42,-1 46,6" fill="url(#kgold)"/>
+    <circle cx="22" cy="2" r="1.8" fill="url(#kgem)"/>
+    <circle cx="32" cy="1" r="1.8" fill="url(#kgem)"/>
+    <circle cx="42" cy="2" r="1.8" fill="url(#kgem)"/>
+    <ellipse cx="26" cy="18" rx="3.4" ry="3.6" fill="white"/>
+    <ellipse cx="38" cy="18" rx="3.4" ry="3.6" fill="white"/>
+    <circle cx="26.5" cy="18.4" r="1.8" fill="#2A1800" stroke="none"/>
+    <circle cx="38.5" cy="18.4" r="1.8" fill="#2A1800" stroke="none"/>
+    <line x1="23" y1="14.5" x2="29" y2="13.5" stroke="#3A1E00" stroke-width="1.4"/>
+    <line x1="35" y1="13.5" x2="41" y2="14.5" stroke="#3A1E00" stroke-width="1.4"/>
+    <path d="M21 26 Q32 35 43 26 Q41 33 32 35 Q23 33 21 26 Z" fill="url(#kbeard)"/>
+    <rect x="10" y="36" width="11" height="5" rx="2.5" fill="url(#kgold)"/>
+    <rect x="7" y="39" width="8" height="11" rx="4" fill="url(#kskin)"/>
+    <g transform="rotate(20,54,37)">
+      <rect x="44" y="34" width="10" height="5" rx="2.5" fill="url(#kgold)"/>
+      <rect x="50" y="36" width="8" height="8" rx="3" fill="url(#kskin)"/>
+      <rect x="54" y="36" width="15" height="7" rx="2" fill="#3A3A44"/>
+      <rect x="55" y="37" width="13" height="2" rx="1" fill="#6A6A78" stroke="none"/>
+      <rect x="61" y="34" width="4" height="4" rx="1" fill="#555"/>
+      <circle cx="71" cy="39.5" r="4.5" fill="url(#kflash)" stroke="none"/>
+    </g>
+    <g transform="rotate(-20,26,60)"><rect x="22" y="60" width="8" height="18" rx="3.5" fill="url(#kcape)"/><rect x="19" y="76" width="13" height="6" rx="2.5" fill="#3A2400"/></g>
+    <g transform="rotate(20,38,60)"><rect x="34" y="60" width="8" height="18" rx="3.5" fill="url(#kcape)"/><rect x="31" y="76" width="13" height="6" rx="2.5" fill="#3A2400"/></g>
   </g>
-  <g transform="rotate(-20,26,60)"><rect x="22" y="60" width="8" height="18" rx="3" fill="#8B0000"/><rect x="20" y="76" width="12" height="5" rx="2" fill="#4A3000"/></g>
-  <g transform="rotate(20,38,60)"><rect x="34" y="60" width="8" height="18" rx="3" fill="#8B0000"/><rect x="32" y="76" width="12" height="5" rx="2" fill="#4A3000"/></g>
 </svg>

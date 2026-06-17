@@ -34,7 +34,7 @@ export default class EnemyManager {
 
   _spawnWave(total) {
     let spawned    = 0;
-    const isBoss   = this.round % 5 === 0;
+    const isBoss   = this.round >= 3 && this.round % 3 === 0;
     const spawnMs  = Math.max(160, ROUND.SPAWN_MS - (this.round - 1) * 28);
 
     if (isBoss) {
@@ -80,7 +80,6 @@ export default class EnemyManager {
   _spawnOne() {
     this._spawnLeft = Math.max(0, this._spawnLeft - 1);
 
-    // Inimigos surgem nas bordas da arena com margem suficiente para caber o sprite
     const pad = 80;
     const side = Phaser.Math.Between(0, 3);
     const ax = ARENA.X + pad, ay = ARENA.Y + pad;
@@ -92,7 +91,39 @@ export default class EnemyManager {
     else                 { ex = ARENA.X + pad; ey = Phaser.Math.Between(ay, ay + ah); }
 
     const type = this._pickType();
-    this.enemies.push(new Enemy(this.scene, ex, ey, this.round, type));
+    this._showSpawnMarker(ex, ey, false, () => {
+      this.enemies.push(new Enemy(this.scene, ex, ey, this.round, type));
+    });
+  }
+
+  // Marcador pulsante antes do spawn (evita inimigo aparecer do nada)
+  _showSpawnMarker(x, y, isBoss, onDone) {
+    const s = this.scene;
+    const color  = isBoss ? 0xff2200 : 0xff8800;
+    const radius = isBoss ? 40 : 22;
+    const delay  = isBoss ? 900 : 520;
+
+    const ring = s.add.graphics().setDepth(GAME.DEPTH_FX ?? 9);
+    ring.lineStyle(isBoss ? 3 : 2, color, 0.9);
+    ring.strokeCircle(x, y, radius);
+
+    const cross1 = s.add.graphics().setDepth(9);
+    cross1.lineStyle(isBoss ? 2.5 : 1.5, color, 0.8);
+    cross1.lineBetween(x - 10, y, x + 10, y);
+    cross1.lineBetween(x, y - 10, x, y + 10);
+
+    s.tweens.add({
+      targets: [ring, cross1],
+      scaleX: isBoss ? 1.6 : 1.4, scaleY: isBoss ? 1.6 : 1.4,
+      alpha: 0,
+      duration: delay,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        ring.destroy();
+        cross1.destroy();
+        onDone();
+      },
+    });
   }
 
   update(tx, ty) {

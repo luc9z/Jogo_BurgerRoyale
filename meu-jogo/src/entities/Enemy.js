@@ -107,7 +107,7 @@ export default class Enemy {
     if (this.hp <= 0) { this._die(); return; }
 
     this.isHurt = true;
-    this.sprite.setTint(0xff6666);
+    this.sprite.setAlpha(0.55);
     this.sprite.play(`${this.key}-hurt`, true);
 
     if (dir) {
@@ -119,9 +119,9 @@ export default class Enemy {
       });
     }
 
-    this.scene.time.delayedCall(250, () => {
+    this.scene.time.delayedCall(200, () => {
       if (!this.isDead && this.sprite?.active) {
-        this.sprite.clearTint();
+        this.sprite.setAlpha(1);
         this.isHurt = false;
       }
     });
@@ -132,7 +132,6 @@ export default class Enemy {
     this.isDead = true;
 
     this.sprite.setVelocity(0, 0);
-    this.sprite.clearTint();
     this.sprite.play(`${this.key}-death`, true);
     this.scene.sound.play('sfx-clown-laugh', {
       volume: 0.45,
@@ -186,7 +185,7 @@ export default class Enemy {
     const { x, y } = this.sprite;
     const t = this.scene.add.text(x, y - 20, `+${this.points}`, {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: this.type === 'clown-fat' ? '13px' : '9px',
+      fontSize: this.type === 'clown-fat' ? '10px' : '10px',
       color: this.type === 'clown-fat' ? '#ff8800' : '#ffd740',
       stroke: '#000', strokeThickness: 4,
     }).setDepth(DEPTH.FX + 1);

@@ -39,13 +39,13 @@ export default class MysteryBox {
 
     this._costLbl = s.add.text(x, y - 30, `${MYSTERY_BOX.COST} pts`, {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '6px', color: '#ffd740',
+      fontSize: '8px', color: '#ffd740',
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(DEPTH.ENTITY + 1);
 
-    this._eLbl = s.add.text(x, y - 38, 'PRESSIONE [E]', {
+    this._eLbl = s.add.text(x, y - 40, 'PRESSIONE [E]', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '5px', color: '#ffffff',
+      fontSize: '8px', color: '#ffffff',
       stroke: '#000', strokeThickness: 3,
     }).setOrigin(0.5, 1).setDepth(DEPTH.ENTITY + 1).setAlpha(0);
 

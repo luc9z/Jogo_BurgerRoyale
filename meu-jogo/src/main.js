@@ -10,7 +10,9 @@ new Phaser.Game({
   width: GAME.WIDTH, height: GAME.HEIGHT,
   parent: 'game',
   backgroundColor: '#08000d',
-  antialias: true,
+  // pixelArt:true = NEAREST filter + roundPixels — elimina blur bilinear interno do WebGL
+  // CSS já tem image-rendering:pixelated; sem isso o texto fica turvo no upscaling
+  pixelArt: true,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

@@ -52,7 +52,7 @@ export default class GameOverScreen {
       btn.on('pointerdown',  () => s.scene.restart());
 
       s.add.text(W/2, H-14, 'ou pressione F5 para recomeçar', {
-        fontFamily:'"Press Start 2P", monospace', fontSize:'6px', color:'#ffffff33',
+        fontFamily:'"Press Start 2P", monospace', fontSize:'8px', color:'#ffffff33',
       }).setOrigin(0.5).setDepth(D+1);
     });
   }

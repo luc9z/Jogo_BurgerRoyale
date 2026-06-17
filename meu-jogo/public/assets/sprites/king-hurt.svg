@@ -1,26 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="60" height="90" viewBox="0 0 60 90">
-  <rect x="14" y="36" width="32" height="28" rx="4" fill="#8B0000" opacity="0.85"/>
-  <rect x="18" y="34" width="24" height="26" rx="4" fill="#D4A017"/>
-  <ellipse cx="30" cy="45" rx="7" ry="5" fill="#E8300B"/>
-  <rect x="26" y="28" width="8" height="8" rx="2" fill="#C8956C"/>
-  <rect x="17" y="10" width="26" height="22" rx="8" fill="#C8956C"/>
-  <g transform="rotate(-15,30,10)">
-    <rect x="16" y="6" width="28" height="8" rx="2" fill="#FFD700" stroke="#B8860B" stroke-width="0.5"/>
-    <polygon points="16,6 20,0 24,6" fill="#FFD700"/>
-    <polygon points="27,6 30,1 33,6" fill="#FFD700"/>
-    <polygon points="36,6 40,0 44,6" fill="#FFD700"/>
+  <defs>
+    <linearGradient id="kgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
+    <linearGradient id="kskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2CDA4"/><stop offset="1" stop-color="#C8956C"/></linearGradient>
+    <linearGradient id="kcape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C42020"/><stop offset="1" stop-color="#6E0000"/></linearGradient>
+    <linearGradient id="kbeard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B0743A"/><stop offset="1" stop-color="#5A3010"/></linearGradient>
+    <radialGradient id="kgem" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FF7A5A"/><stop offset="1" stop-color="#B81000"/></radialGradient>
+  </defs>
+  <g stroke="#3A1E00" stroke-width="0.7" stroke-linejoin="round">
+    <rect x="14" y="36" width="32" height="28" rx="6" fill="url(#kcape)"/>
+    <rect x="18" y="34" width="24" height="26" rx="5" fill="url(#kgold)"/>
+    <ellipse cx="30" cy="45" rx="7" ry="5.5" fill="url(#kgem)"/>
+    <rect x="26" y="28" width="8" height="8" rx="2" fill="url(#kskin)"/>
+    <rect x="17" y="10" width="26" height="22" rx="9" fill="url(#kskin)"/>
+    <g transform="rotate(-15,30,10)">
+      <rect x="16" y="5" width="28" height="9" rx="2" fill="url(#kgold)"/>
+      <polygon points="16,6 20,-1 24,6" fill="url(#kgold)"/>
+      <polygon points="27,6 30,0 33,6" fill="url(#kgold)"/>
+      <polygon points="36,6 40,-1 44,6" fill="url(#kgold)"/>
+    </g>
+    <line x1="21" y1="15" x2="27" y2="21" stroke="#8B1000" stroke-width="2.2"/>
+    <line x1="27" y1="15" x2="21" y2="21" stroke="#8B1000" stroke-width="2.2"/>
+    <ellipse cx="36" cy="18" rx="3.4" ry="3.6" fill="white"/>
+    <circle cx="36" cy="18" r="1.7" fill="#2A1800" stroke="none"/>
+    <path d="M22 29 Q30 24 38 29 Q34 27 30 27 Q26 27 22 29 Z" fill="url(#kbeard)"/>
+    <g transform="rotate(-30,13,37)"><rect x="8" y="36" width="11" height="5" rx="2.5" fill="url(#kgold)"/><rect x="5" y="39" width="8" height="11" rx="4" fill="url(#kskin)"/></g>
+    <g transform="rotate(30,47,37)"><rect x="41" y="36" width="11" height="5" rx="2.5" fill="url(#kgold)"/><rect x="47" y="39" width="8" height="11" rx="4" fill="url(#kskin)"/></g>
+    <rect x="20" y="60" width="8" height="18" rx="3.5" fill="url(#kcape)"/>
+    <rect x="32" y="60" width="8" height="18" rx="3.5" fill="url(#kcape)"/>
+    <rect x="17" y="76" width="13" height="6" rx="2.5" fill="#3A2400"/>
+    <rect x="30" y="76" width="13" height="6" rx="2.5" fill="#3A2400"/>
   </g>
-  <line x1="21" y1="15" x2="27" y2="21" stroke="#E8300B" stroke-width="2"/>
-  <line x1="27" y1="15" x2="21" y2="21" stroke="#E8300B" stroke-width="2"/>
-  <ellipse cx="36" cy="18" rx="3" ry="3" fill="white"/>
-  <circle cx="36" cy="18" r="1.5" fill="#3A2000"/>
-  <path d="M22 28 Q30 24 38 28" stroke="#8B4513" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <g transform="rotate(-30,13,37)"><rect x="8" y="36" width="10" height="5" rx="2" fill="#D4A017"/><rect x="6" y="39" width="7" height="10" rx="3" fill="#C8956C"/></g>
-  <g transform="rotate(30,47,37)"><rect x="42" y="36" width="10" height="5" rx="2" fill="#D4A017"/><rect x="47" y="39" width="7" height="10" rx="3" fill="#C8956C"/></g>
-  <rect x="17" y="10" width="26" height="22" rx="8" fill="red" opacity="0.25"/>
-  <rect x="18" y="34" width="24" height="26" rx="4" fill="red" opacity="0.2"/>
-  <rect x="20" y="60" width="8" height="18" rx="3" fill="#8B0000"/>
-  <rect x="32" y="60" width="8" height="18" rx="3" fill="#8B0000"/>
-  <rect x="18" y="76" width="12" height="5" rx="2" fill="#4A3000"/>
-  <rect x="30" y="76" width="12" height="5" rx="2" fill="#4A3000"/>
+  <rect x="14" y="8" width="32" height="56" rx="8" fill="#FF2020" opacity="0.28"/>
 </svg>

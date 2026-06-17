@@ -1,11 +1,14 @@
 import { GAME, PLAYER, COLOR, DEPTH, WEAPONS, EVT } from '../constants.js';
 
 const WEAPON_COLOR = {
-  pistol:     0x999999,
-  revolver:   0xaa8833,
-  shotgun:    0xff6600,
-  machinegun: 0x44ffaa,
-  sniper:     0x4488cc,
+  pistol:       0x999999,
+  revolver:     0xaa8833,
+  shotgun:      0xff6600,
+  machinegun:   0x44ffaa,
+  sniper:       0x4488cc,
+  burst:        0xffaa00,
+  laser:        0x00ffee,
+  doubleshotgun:0xff4400,
 };
 
 export default class HUD {
@@ -35,27 +38,27 @@ export default class HUD {
     this._lx = lx; this._ly = ly; this._lw = lw;
 
     // ── Corações ────────────────────────────────────────────
-    s.add.text(lx + 8, ly + 12, 'HP', ps('9px', '#ff5555')).setDepth(D + 1);
+    s.add.text(lx + 8, ly + 12, 'HP', ps('8px', '#ff5555')).setDepth(D + 1);
     this._heartGfx     = s.add.graphics().setDepth(D + 2);
     this._heartOriginX = lx + 48;
     this._heartOriginY = ly + 8;
     this._drawHearts(PLAYER.MAX_HEARTS);
 
     // ── Ammo ────────────────────────────────────────────────
-    s.add.text(lx + 8, ly + 38, 'AMMO', ps('9px', '#ffdd44')).setDepth(D + 1);
+    s.add.text(lx + 8, ly + 38, 'AMMO', ps('8px', '#ffdd44')).setDepth(D + 1);
     this._ammoIcons   = [];
     this._ammoDepth   = D + 2;
     this._ammoOriginX = lx + 64;
     this._ammoOriginY = ly + 40;
     this._rebuildAmmoIcons(WEAPONS.pistol.clipSize);
-    this._reloadLbl = s.add.text(lx + 64, ly + 40, '', ps('10px', '#ff8800')).setDepth(D + 3);
+    this._reloadLbl = s.add.text(lx + 64, ly + 40, '', ps('8px', '#ff8800')).setDepth(D + 3);
 
     // ── Arma atual ──────────────────────────────────────────
     s.add.text(lx + 8, ly + 68, 'ARMA', ps('8px', '#aaaaff')).setDepth(D + 1);
 
     this._weaponDot = s.add.circle(lx + 64, ly + 72, 5, 0x999999, 1).setDepth(D + 2);
 
-    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps('9px', '#ffffff', 3))
+    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps('8px', '#ffffff', 3))
       .setDepth(D + 3);
 
     // ── Painel direito (pontos + round) ─────────────────────
@@ -64,15 +67,15 @@ export default class HUD {
     rb.fillStyle(COLOR.HUD_BG, 0.92); rb.fillRoundedRect(rx, ry, rw, rh, 6);
     rb.lineStyle(1.5, COLOR.HUD_BORDER, 1); rb.strokeRoundedRect(rx, ry, rw, rh, 6);
 
-    s.add.text(rx + 10, ry + 10, 'PONTOS', ps('9px', '#ffd740')).setDepth(D + 1);
-    this._scoreTxt = s.add.text(rx + rw - 10, ry + 10, '0', ps('14px', '#ffd740')).setOrigin(1, 0).setDepth(D + 2);
-    s.add.text(rx + 10, ry + 40, 'ROUND',  ps('9px', '#ff8800')).setDepth(D + 1);
-    this._roundTxt = s.add.text(rx + rw - 10, ry + 40, '1', ps('14px', '#ff8800')).setOrigin(1, 0).setDepth(D + 2);
+    s.add.text(rx + 10, ry + 10, 'PONTOS', ps('8px', '#ffd740')).setDepth(D + 1);
+    this._scoreTxt = s.add.text(rx + rw - 10, ry + 10, '0', ps('12px', '#ffd740')).setOrigin(1, 0).setDepth(D + 2);
+    s.add.text(rx + 10, ry + 40, 'ROUND',  ps('8px', '#ff8800')).setDepth(D + 1);
+    this._roundTxt = s.add.text(rx + rw - 10, ry + 40, '1', ps('12px', '#ff8800')).setOrigin(1, 0).setDepth(D + 2);
 
     // ── Inimigos restantes ──────────────────────────────────
     this._enemyTxt = s.add.text(W / 2, 14, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '11px', color: '#ff5555',
+      fontSize: '8px', color: '#ff5555',
       stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(D + 1);
 
@@ -85,13 +88,13 @@ export default class HUD {
 
     this._bannerSub = s.add.text(W / 2, H / 2 + 14, '', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '12px', color: '#ff8800',
-      stroke: '#000', strokeThickness: 5,
+      fontSize: '8px', color: '#ff8800',
+      stroke: '#000', strokeThickness: 4,
     }).setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
     s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '7px', color: '#ffffff22',
+      fontSize: '8px', color: '#ffffff22',
     }).setOrigin(0.5, 1).setDepth(D);
   }
 

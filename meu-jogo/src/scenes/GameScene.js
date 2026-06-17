@@ -56,6 +56,7 @@ export default class GameScene extends Phaser.Scene {
     this.load.audio('sfx-player-death', 'assets/audio/player-death.mp3');
     this.load.audio('sfx-clown-hit',    'assets/audio/clown-hit.mp3');
     this.load.audio('sfx-clown-laugh',  'assets/audio/clown-laugh.mp3');
+    this.load.audio('bgm',              'assets/audio/background-music.mp3');
   }
 
   // ── CREATE ───────────────────────────────────────────────
@@ -69,6 +70,7 @@ export default class GameScene extends Phaser.Scene {
     this._pickups         = [];
 
     this._makeBulletTexture();
+    this._smoothTextures();
     this._createAnims();
     this._buildMap();
 
@@ -78,23 +80,43 @@ export default class GameScene extends Phaser.Scene {
 
     this._escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
-    this.events.on('resume', () => {
+    // Handlers nomeados — removidos no shutdown para NÃO acumularem a cada
+    // scene.restart() (this.events persiste entre restarts → listeners duplicados,
+    // causando pontos em dobro / drops duplicados ao "jogar novamente").
+    const onResume = () => {
       this._paused = false;
       if (this._pendingNextRound) {
         this._pendingNextRound = false;
         this._roundEnding      = false;
         this.enemies.startRound();
       }
-    });
-
-    this.events.on(EVT.ENEMY_KILLED, pts => {
+    };
+    const onKilled = pts => {
       this.score += pts;
       this.events.emit('score-changed', this.score);
-    });
-    this.events.on(EVT.PLAYER_DEAD, () => this._gameOver());
+    };
+    const onDead = () => this._gameOver();
+
+    this.events.on('resume', onResume);
+    this.events.on(EVT.ENEMY_KILLED, onKilled);
+    this.events.on(EVT.PLAYER_DEAD, onDead);
 
     this._setupPickups();
+
+    this.events.once('shutdown', () => {
+      this.events.off('resume', onResume);
+      this.events.off(EVT.ENEMY_KILLED, onKilled);
+      this.events.off(EVT.PLAYER_DEAD, onDead);
+      this.events.off('drop-heal', this._onDropHeal);
+      this.events.off('show-boss-warning', this._onBossWarning);
+      if (this._bgm) { this._bgm.stop(); this._bgm.destroy(); this._bgm = null; }
+    });
+
     this.enemies.startRound();
+
+    this.sound.stopByKey('bgm');
+    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.4 });
+    this._bgm.play();
   }
 
   // ── UPDATE ───────────────────────────────────────────────
@@ -160,7 +182,7 @@ export default class GameScene extends Phaser.Scene {
 
   // ── PICKUPS DE CURA ──────────────────────────────────────
   _setupPickups() {
-    this.events.on('drop-heal', (x, y) => {
+    this._onDropHeal = (x, y) => {
       const g = this.add.graphics().setDepth(DEPTH.FX);
       g.fillStyle(0xff2244, 1);
       g.fillRect(-7, -2, 14, 4);
@@ -178,9 +200,9 @@ export default class GameScene extends Phaser.Scene {
         const i = this._pickups.indexOf(pickup);
         if (i >= 0) { this._pickups.splice(i, 1); g.destroy(); }
       });
-    });
+    };
 
-    this.events.on('show-boss-warning', () => {
+    this._onBossWarning = () => {
       const { WIDTH: W, HEIGHT: H } = GAME;
       const lbl = this.add.text(W/2, H/2 - 72, '⚠  CHEFE CHEGANDO!  ⚠', {
         fontFamily: '"Press Start 2P", monospace',
@@ -191,7 +213,10 @@ export default class GameScene extends Phaser.Scene {
         targets: lbl, alpha: 1, duration: 220, yoyo: true, repeat: 5,
         onComplete: () => lbl.destroy(),
       });
-    });
+    };
+
+    this.events.on('drop-heal', this._onDropHeal);
+    this.events.on('show-boss-warning', this._onBossWarning);
   }
 
   _checkPickups() {
@@ -201,6 +226,23 @@ export default class GameScene extends Phaser.Scene {
         this.player.heal();
         p.g.destroy();
         this._pickups.splice(i, 1);
+      }
+    }
+  }
+
+  // Filtro LINEAR nas texturas de arte (sprites/fundo) para escalarem suaves.
+  // Texto continua NEAREST (pixelArt global) = fontes nítidas.
+  _smoothTextures() {
+    const keys = [
+      'king-frame-idle', 'king-frame-walk-a', 'king-frame-walk-b',
+      'king-frame-attack', 'king-frame-hurt', 'king-frame-dead',
+      'clown-frame-idle', 'clown-frame-walk-a', 'clown-frame-walk-b',
+      'clown-frame-attack', 'clown-frame-hurt', 'clown-frame-dead',
+      'background',
+    ];
+    for (const k of keys) {
+      if (this.textures.exists(k)) {
+        this.textures.get(k).setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
     }
   }
@@ -246,6 +288,15 @@ export default class GameScene extends Phaser.Scene {
     const { WIDTH: W, HEIGHT: H } = GAME;
     this.add.image(W/2, H/2, 'background').setDisplaySize(W, H).setDepth(DEPTH.BG);
     this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.38).setDepth(DEPTH.BG+1);
+
+    // Vinheta: escurece as bordas para dar profundidade à arena
+    const vig = this.add.graphics().setDepth(DEPTH.BG+1);
+    vig.fillStyle(0x000000, 0.4);
+    vig.fillRect(0, 0, W, ARENA.Y);
+    vig.fillRect(0, ARENA.Y + ARENA.H, W, H - (ARENA.Y + ARENA.H));
+    vig.fillRect(0, 0, ARENA.X, H);
+    vig.fillRect(ARENA.X + ARENA.W, 0, W - (ARENA.X + ARENA.W), H);
+
     this.physics.world.setBounds(ARENA.X, ARENA.Y, ARENA.W, ARENA.H);
 
     const g = this.add.graphics().setDepth(DEPTH.BORDER);
@@ -274,6 +325,7 @@ export default class GameScene extends Phaser.Scene {
     this._goShown   = true;
     this.isGameOver = true;
     this.physics.pause();
+    if (this._bgm) this._bgm.stop();
 
     // Restaura cursor (estava oculto pelo crosshair)
     this.input.setDefaultCursor('default');
@@ -294,28 +346,32 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#000', strokeThickness: 6,
       });
 
-      this.add.text(W/2, H/2-110, 'GAME OVER',               ps('38px','#ff2200')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-60,  'Os palhaços venceram...', ps('10px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-26,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('12px','#ffd740')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2+8,   `Rounds: ${this.enemies.round}`, ps('10px','#ff8800')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-110, 'GAME OVER',               ps('28px','#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-68,  'Os palhaços venceram...', ps('8px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-40,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('10px','#ffd740')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-16,  `Rounds: ${this.enemies.round}`, ps('8px','#ff8800')).setOrigin(0.5).setDepth(D+1);
       if (isNew) {
-        this.add.text(W/2, H/2+38, '✦ NOVO RECORDE! ✦', ps('9px','#ffd740')).setOrigin(0.5).setDepth(D+1);
+        this.add.text(W/2, H/2+12, '✦ NOVO RECORDE! ✦', ps('8px','#ffd740')).setOrigin(0.5).setDepth(D+1);
       }
 
       const mkBtn = (y, label, col, onClick) => {
-        const btn = this.add.rectangle(W/2, y, 280, 44, 0x0c000f)
+        const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
           .setStrokeStyle(2, col).setDepth(D+1)
           .setInteractive({ useHandCursor: true });
-        const txt = this.add.text(W/2, y, label, ps('10px', '#ffffff')).setOrigin(0.5).setDepth(D+2);
+        const txt = this.add.text(W/2, y, label, ps('8px', '#ffffff')).setOrigin(0.5).setDepth(D+2);
         btn.on('pointerover', () => { btn.setFillStyle(0x1a001a); this.tweens.add({ targets:[btn,txt], scaleX:1.05, scaleY:1.05, duration:60 }); });
         btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,txt], scaleX:1,    scaleY:1,    duration:60 }); });
         btn.on('pointerdown', onClick);
       };
 
       mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, () => {
-        this.scene.start('GameScene');
+        this.scene.stop('UpgradeScene');
+        this.scene.stop('PauseScene');
+        this.scene.restart();
       });
       mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555, () => {
+        this.scene.stop('UpgradeScene');
+        this.scene.stop('PauseScene');
         this.scene.start('MenuScene');
       });
     });

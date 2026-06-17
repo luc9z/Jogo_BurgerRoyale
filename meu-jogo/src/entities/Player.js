@@ -3,13 +3,16 @@ import { PLAYER, ARENA, DEPTH, EVT, WEAPONS, SVG_H } from '../constants.js';
 
 const SKIN = 'king-default';
 
-// Estilo visual de cada arma (desenhado como retângulo rotacionado)
 const GUN_STYLE = {
-  pistol:     { len: 16, hw: 2.5, col: 0x999999, off: 14 },
-  revolver:   { len: 21, hw: 3.0, col: 0xaa8833, off: 13 },
-  shotgun:    { len: 17, hw: 5.0, col: 0x885522, off: 11 },
-  machinegun: { len: 27, hw: 2.5, col: 0x44aa55, off: 13 },
-  sniper:     { len: 35, hw: 1.8, col: 0x4488cc, off: 13 },
+  knife:        { type: 'knife', off: 10 },
+  pistol:       { type: 'gun', bodyLen: 10, bodyH: 7,  barrelLen: 17, barrelH: 4.5, col: 0xdddddd, bodyCol: 0x888888, off: 12 },
+  revolver:     { type: 'gun', bodyLen:  9, bodyH: 7,  barrelLen: 22, barrelH: 4.5, col: 0xeeaa44, bodyCol: 0x995511, off: 11, cylinder: true },
+  shotgun:      { type: 'gun', bodyLen: 11, bodyH: 10, barrelLen: 15, barrelH: 8,   col: 0xcc9966, bodyCol: 0x7a4422, off: 10 },
+  machinegun:   { type: 'gun', bodyLen: 13, bodyH: 8,  barrelLen: 30, barrelH: 3.5, col: 0x44dd77, bodyCol: 0x228844, off: 12, magazine: true },
+  sniper:       { type: 'gun', bodyLen: 13, bodyH: 6,  barrelLen: 40, barrelH: 2.5, col: 0x66bbff, bodyCol: 0x2266cc, off: 12, scope: true },
+  burst:        { type: 'gun', bodyLen: 11, bodyH: 7,  barrelLen: 22, barrelH: 4,   col: 0xffbb44, bodyCol: 0xcc6600, off: 12 },
+  laser:        { type: 'gun', bodyLen: 12, bodyH: 5,  barrelLen: 35, barrelH: 2,   col: 0x00ffee, bodyCol: 0x007788, off: 12, scope: true },
+  doubleshotgun:{ type: 'gun', bodyLen: 11, bodyH: 12, barrelLen: 14, barrelH: 10,  col: 0xff7744, bodyCol: 0x883322, off: 10 },
 };
 
 export default class Player {
@@ -126,7 +129,6 @@ export default class Player {
     }
   }
 
-  // Desenha a arma como retângulo rotacionado na direção da mira
   _drawGun() {
     const g = this._gunGfx;
     g.clear();
@@ -136,23 +138,108 @@ export default class Player {
     const px    = this.sprite.x, py = this.sprite.y;
     const angle = Math.atan2(this.lastDir.y, this.lastDir.x);
     const cos   = Math.cos(angle), sin = Math.sin(angle);
-    const pcos  = -sin, psin = cos; // perpendicular
-
+    const pcos  = -sin, psin = cos;
     const ox = px + cos * st.off, oy = py + sin * st.off;
 
-    const x1 = ox + pcos * st.hw,              y1 = oy + psin * st.hw;
-    const x2 = ox + cos * st.len + pcos * st.hw, y2 = oy + sin * st.len + psin * st.hw;
-    const x3 = ox + cos * st.len - pcos * st.hw, y3 = oy + sin * st.len - psin * st.hw;
-    const x4 = ox - pcos * st.hw,              y4 = oy - psin * st.hw;
+    // Desenha retângulo rotacionado: d0=início, len=comprimento, hw=meia-altura
+    const box = (d0, len, hw, col) => {
+      const ax = ox + cos*d0,       ay = oy + sin*d0;
+      const bx = ox + cos*(d0+len), by = oy + sin*(d0+len);
+      g.fillStyle(col, 1);
+      g.fillTriangle(ax+pcos*hw, ay+psin*hw, bx+pcos*hw, by+psin*hw, bx-pcos*hw, by-psin*hw);
+      g.fillTriangle(ax+pcos*hw, ay+psin*hw, bx-pcos*hw, by-psin*hw, ax-pcos*hw, ay-psin*hw);
+    };
 
-    g.fillStyle(st.col, 1);
-    g.fillTriangle(x1, y1, x2, y2, x3, y3);
-    g.fillTriangle(x1, y1, x3, y3, x4, y4);
+    if (st.type === 'knife') {
+      // Guarda (crossguard)
+      box(-3, 5, 5.5, 0x888866);
+      // Lâmina - triângulo apontado
+      const tipX = ox + cos*32, tipY = oy + sin*32;
+      g.fillStyle(0xddddef, 1);
+      g.fillTriangle(ox+pcos*3.5, oy+psin*3.5, ox-pcos*3.5, oy-psin*3.5, tipX, tipY);
+      // Reflexo na borda
+      g.fillStyle(0xffffff, 0.55);
+      g.fillTriangle(ox-pcos*0.5, oy-psin*0.5, ox-pcos*3.5, oy-psin*3.5, tipX, tipY);
+      if (this._attackLock) {
+        g.fillStyle(0xffffff, 0.6);
+        g.fillCircle(tipX, tipY, 5);
+      }
+      return;
+    }
 
-    // Brilho no cano ao atirar
+    // Corpo / grip (mais largo, mais escuro)
+    box(0, st.bodyLen, st.bodyH, st.bodyCol);
+    // Cano (mais fino, mais claro)
+    box(st.bodyLen, st.barrelLen, st.barrelH, st.col);
+    // Reflexo no lado superior do cano (direção -perp = "cima" rotacionado)
+    const hlOff = st.barrelH * 0.6;
+    const bsX = ox + cos*st.bodyLen       - pcos*hlOff, bsY = oy + sin*st.bodyLen       - psin*hlOff;
+    const beX = ox + cos*(st.bodyLen+st.barrelLen) - pcos*hlOff, beY = oy + sin*(st.bodyLen+st.barrelLen) - psin*hlOff;
+    g.lineStyle(1, 0xffffff, 0.22);
+    g.lineBetween(bsX, bsY, beX, beY);
+
+    // Cilindro (revólver) — do lado de cima do corpo
+    if (st.cylinder) {
+      const cd = st.bodyLen * 0.5;
+      // cilindro fica no lado -perp (topo do corpo)
+      const cx2 = ox + cos*cd - pcos*4, cy2 = oy + sin*cd - psin*4;
+      g.fillStyle(0xeebb44, 1);
+      g.fillCircle(cx2, cy2, 5.5);
+      g.lineStyle(1.5, 0x664400, 1);
+      g.strokeCircle(cx2, cy2, 5.5);
+      g.fillStyle(0xcc9922, 1);
+      g.fillCircle(cx2, cy2, 2.5);
+    }
+
+    // Carregador (metralhadora) — perpendicular abaixo do corpo (+perp = "baixo")
+    if (st.magazine) {
+      const md = st.bodyLen * 0.52;
+      const mx2 = ox + cos*md, my2 = oy + sin*md;
+      const magW = 8, magH = 10;
+      const ph = st.bodyH;
+      const v0x = mx2 + pcos*ph,             v0y = my2 + psin*ph;
+      const v1x = mx2 + cos*magW + pcos*ph,  v1y = my2 + sin*magW + psin*ph;
+      const v2x = mx2 + cos*magW + pcos*(ph+magH), v2y = my2 + sin*magW + psin*(ph+magH);
+      const v3x = mx2 + pcos*(ph+magH),      v3y = my2 + psin*(ph+magH);
+      g.fillStyle(0x226644, 1);
+      g.fillTriangle(v0x, v0y, v1x, v1y, v2x, v2y);
+      g.fillTriangle(v0x, v0y, v2x, v2y, v3x, v3y);
+    }
+
+    // Luneta (sniper) — acima do cano, lado -perp
+    if (st.scope) {
+      const sd0 = st.bodyLen + 4;
+      const slen = st.barrelLen * 0.52;
+      const sOff = st.barrelH + 3.5; // distância do eixo (acima)
+      // corpo da luneta como retângulo deslocado
+      const ssAx = ox + cos*sd0             - pcos*sOff, ssAy = oy + sin*sd0             - psin*sOff;
+      const ssEx = ox + cos*(sd0+slen)       - pcos*sOff, ssEy = oy + sin*(sd0+slen)       - psin*sOff;
+      const hw2 = 2.5;
+      g.fillStyle(0x334455, 1);
+      g.fillTriangle(ssAx-pcos*hw2, ssAy-psin*hw2, ssEx-pcos*hw2, ssEy-psin*hw2, ssEx+pcos*hw2, ssEy+psin*hw2);
+      g.fillTriangle(ssAx-pcos*hw2, ssAy-psin*hw2, ssEx+pcos*hw2, ssEy+psin*hw2, ssAx+pcos*hw2, ssAy+psin*hw2);
+      // lente no centro da luneta
+      const lx = ox + cos*(sd0 + slen*0.65) - pcos*sOff;
+      const ly = oy + sin*(sd0 + slen*0.65) - psin*sOff;
+      g.fillStyle(0x88ddff, 0.9);
+      g.fillCircle(lx, ly, 3.5);
+      g.lineStyle(1, 0x336688, 0.8);
+      g.strokeCircle(lx, ly, 3.5);
+    }
+
+    // Flash de disparo
     if (this._attackLock) {
-      g.fillStyle(0xffee55, 0.75);
-      g.fillCircle(ox + cos * st.len, oy + sin * st.len, 4);
+      const mx2 = ox + cos*(st.bodyLen + st.barrelLen);
+      const my2 = oy + sin*(st.bodyLen + st.barrelLen);
+      g.fillStyle(0xffee44, 0.92);
+      g.fillCircle(mx2, my2, 6);
+      g.fillStyle(0xffffff, 0.75);
+      g.fillCircle(mx2, my2, 2.5);
+      for (let i = 0; i < 4; i++) {
+        const ra = angle + (i * Math.PI / 2) + Math.PI / 4;
+        g.lineStyle(1.5, 0xffcc22, 0.5);
+        g.lineBetween(mx2, my2, mx2 + Math.cos(ra)*10, my2 + Math.sin(ra)*10);
+      }
     }
   }
 
@@ -299,27 +386,45 @@ export default class Player {
     this.scene.cameras.main.shake(200, 0.009);
     this.scene.sound.play('sfx-player-hurt', { volume: 0.65 });
 
+    // Pisca de invencibilidade (alpha) — não tinge o sprite de vermelho,
+    // o que ficava feio sobre os gradientes do SVG.
+    this._startHurtBlink();
+
     if (!this._attackLock) {
-      this.sprite.setTint(0xff2222);
       this.sprite.play(`${SKIN}-hurt`, true);
       this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
         if (!this.isDead) {
-          this.sprite.clearTint();
           if (this.isMoving) this.sprite.play(`${SKIN}-walk`, true);
           else               this.sprite.play(`${SKIN}-idle`, true);
         }
       });
-    } else {
-      this.sprite.setTint(0xff2222);
-      this.scene.time.delayedCall(150, () => {
-        if (!this.isDead) this.sprite.clearTint();
-      });
     }
 
     this.isInvincible = true;
-    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => { this.isInvincible = false; });
+    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => {
+      this.isInvincible = false;
+      this._stopHurtBlink();
+    });
 
     if (this.hearts <= 0) this._die();
+  }
+
+  // Pisca suave durante i-frames
+  _startHurtBlink() {
+    this._stopHurtBlink();
+    this._blinkTween = this.scene.tweens.add({
+      targets: this.sprite,
+      alpha: 0.35,
+      duration: 110,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  _stopHurtBlink() {
+    if (this._blinkTween) { this._blinkTween.stop(); this._blinkTween = null; }
+    if (this.sprite?.active) this.sprite.setAlpha(1);
   }
 
   _die() {
@@ -333,8 +438,8 @@ export default class Player {
     this._crosshair.setVisible(false);
     this._gunGfx.clear();
 
+    this._stopHurtBlink();
     this.sprite.setVelocity(0, 0);
-    this.sprite.clearTint();
     this.sprite.play(`${SKIN}-death`, true);
     this.scene.sound.play('sfx-player-death', { volume: 0.7 });
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {

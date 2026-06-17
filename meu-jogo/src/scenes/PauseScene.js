@@ -46,9 +46,9 @@ export default class PauseScene extends Phaser.Scene {
       `Pontos: ${this.gameScore.toLocaleString('pt-BR')}`,
       `Round:  ${this.gameRound}   |   Arma: ${this.gameWeapon}`,
     ], {
-      ...ps('6px', '#ff8800', 2),
+      ...ps('8px', '#ff8800', 2),
       align: 'center',
-      lineSpacing: 6,
+      lineSpacing: 8,
     }).setOrigin(0.5).setDepth(2);
 
     // Linha separadora
@@ -63,7 +63,7 @@ export default class PauseScene extends Phaser.Scene {
 
     // Dica ESC
     this.add.text(W/2, H/2 + 132, 'ESC — continuar', {
-      ...ps('5px', '#ffffff44', 1),
+      ...ps('8px', '#ffffff44', 1),
     }).setOrigin(0.5).setDepth(2);
 
     // ESC fecha o pause

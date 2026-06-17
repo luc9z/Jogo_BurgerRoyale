@@ -26,19 +26,22 @@ export const ENEMY_TYPES = {
   clown:         { key: 'clown',        scale: 0.60,  hpMult: 1.0,  speedMult: 1.0,  pointsMult: 1.0  },
   'clown-fat':   { key: 'clown-fat',    scale: 0.75,  hpMult: 2.2,  speedMult: 0.62, pointsMult: 2.5  },
   'clown-skinny':{ key: 'clown-skinny', scale: 0.475, hpMult: 0.55, speedMult: 1.75, pointsMult: 1.8  },
-  'clown-boss':  { key: 'clown-fat',    scale: 1.20,  hpMult: 8.0,  speedMult: 0.42, pointsMult: 12.0 },
+  'clown-boss':  { key: 'clown-fat',    scale: 1.65,  hpMult: 9.0,  speedMult: 0.42, pointsMult: 14.0 },
 };
 
 export const BULLET = { SPEED: 520, DAMAGE: 25 };
 export const ROUND  = { WARN_MS: 3500, SPAWN_MS: 480, BASE_COUNT: 6, PER_ROUND: 3, MAX_COUNT: 50 };
 
 export const WEAPONS = {
-  knife:      { name: 'FACA',         damage: 45, bulletSpeed: 0,   clipSize: -1, shootCd: 420, reloadMs: 0,    spread: 0,    pellets: 0, range: 78,   isMelee: true  },
-  pistol:     { name: 'PISTOLA',      damage: 25, bulletSpeed: 520, clipSize: 10, shootCd: 280, reloadMs: 1800, spread: 0,    pellets: 1, range: 620,  isMelee: false },
-  revolver:   { name: 'REVOLVER',     damage: 78, bulletSpeed: 700, clipSize: 6,  shootCd: 490, reloadMs: 1700, spread: 0,    pellets: 1, range: 920,  isMelee: false },
-  shotgun:    { name: 'ESCOPETA',     damage: 30, bulletSpeed: 430, clipSize: 6,  shootCd: 650, reloadMs: 2000, spread: 0.28, pellets: 5, range: 200,  isMelee: false },
-  machinegun: { name: 'METRALHADORA', damage: 13, bulletSpeed: 610, clipSize: 35, shootCd: 90,  reloadMs: 1400, spread: 0.08, pellets: 1, range: 520,  isMelee: false },
-  sniper:     { name: 'SNIPER',       damage: 95, bulletSpeed: 980, clipSize: 3,  shootCd: 900, reloadMs: 2500, spread: 0,    pellets: 1, range: 1400, isMelee: false },
+  knife:        { name: 'FACA',          damage: 45,  bulletSpeed: 0,    clipSize: -1, shootCd: 420, reloadMs: 0,    spread: 0,    pellets: 0, range: 78,   isMelee: true  },
+  pistol:       { name: 'PISTOLA',       damage: 25,  bulletSpeed: 520,  clipSize: 10, shootCd: 280, reloadMs: 1800, spread: 0,    pellets: 1, range: 620,  isMelee: false },
+  revolver:     { name: 'REVOLVER',      damage: 78,  bulletSpeed: 700,  clipSize: 6,  shootCd: 490, reloadMs: 1700, spread: 0,    pellets: 1, range: 920,  isMelee: false },
+  shotgun:      { name: 'ESCOPETA',      damage: 30,  bulletSpeed: 430,  clipSize: 6,  shootCd: 650, reloadMs: 2000, spread: 0.28, pellets: 5, range: 200,  isMelee: false },
+  machinegun:   { name: 'METRALHADORA',  damage: 13,  bulletSpeed: 610,  clipSize: 35, shootCd: 90,  reloadMs: 1400, spread: 0.08, pellets: 1, range: 520,  isMelee: false },
+  sniper:       { name: 'SNIPER',        damage: 180, bulletSpeed: 1200, clipSize: 5,  shootCd: 750, reloadMs: 2000, spread: 0,    pellets: 1, range: 1800, isMelee: false },
+  burst:        { name: 'BURST',         damage: 38,  bulletSpeed: 750,  clipSize: 21, shootCd: 180, reloadMs: 1500, spread: 0.06, pellets: 3, range: 850,  isMelee: false },
+  laser:        { name: 'LASER',         damage: 55,  bulletSpeed: 2200, clipSize: 16, shootCd: 220, reloadMs: 1600, spread: 0,    pellets: 1, range: 2000, isMelee: false },
+  doubleshotgun:{ name: 'ESCOPETA DUPLA',damage: 28,  bulletSpeed: 460,  clipSize: 4,  shootCd: 500, reloadMs: 1800, spread: 0.32, pellets: 8, range: 220,  isMelee: false },
 };
 
 export const MYSTERY_BOX = { COST: 500, INTERACT_DIST: 60 };

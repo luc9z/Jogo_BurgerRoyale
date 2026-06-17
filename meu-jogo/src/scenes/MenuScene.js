@@ -26,13 +26,30 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   _buildBackground() {
-    this.add.rectangle(W/2, H/2, W, H, 0x08000d);
+    // Fundo com gradiente vertical (vinho escuro → preto)
+    const bg = this.add.graphics();
+    bg.fillGradientStyle(0x1a0410, 0x1a0410, 0x05000a, 0x05000a, 1);
+    bg.fillRect(0, 0, W, H);
 
-    // Grade sutil no fundo
-    const g = this.add.graphics().setAlpha(0.06);
+    // Brilho radial central quente
+    const glow = this.add.graphics().setAlpha(0.5);
+    glow.fillStyle(0x4a0a1a, 1);
+    glow.fillCircle(W/2, H/2 - 60, 320);
+    glow.setBlendMode(Phaser.BlendModes.SCREEN);
+
+    // Grade em perspectiva no "chão"
+    const g = this.add.graphics().setAlpha(0.10);
     g.lineStyle(1, 0xffd740);
     for (let x = 0; x < W; x += 48) g.lineBetween(x, 0, x, H);
     for (let y = 0; y < H; y += 48) g.lineBetween(0, y, W, y);
+
+    // Vinheta: bordas escurecidas
+    const vig = this.add.graphics();
+    vig.fillStyle(0x000000, 0.55);
+    vig.fillRect(0, 0, W, 60);
+    vig.fillRect(0, H - 60, W, 60);
+    vig.fillRect(0, 0, 60, H);
+    vig.fillRect(W - 60, 0, 60, H);
 
     // Partículas decorativas (bolinhas flutuando que representam balas/palhaços)
     const cols = [0xff2200, 0xffd740, 0xff8800, 0x22cc44, 0x00aaff, 0xcc00ff];
@@ -59,7 +76,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     const title = this.add.text(W/2, H/2 - 130, 'BURGER ROYALE', {
-      ...ps('30px', '#ffd740', 10),
+      ...ps('28px', '#ffd740', 10),
     }).setOrigin(0.5);
 
     this.tweens.add({
@@ -68,7 +85,7 @@ export default class MenuScene extends Phaser.Scene {
     });
 
     this.add.text(W/2, H/2 - 92, 'CLOWN APOCALYPSE', {
-      ...ps('11px', '#cc3300', 5),
+      ...ps('8px', '#cc3300', 4),
     }).setOrigin(0.5);
 
     // Linha separadora decorativa
@@ -83,22 +100,22 @@ export default class MenuScene extends Phaser.Scene {
     const best = parseInt(localStorage.getItem('burgerRoyale_best') || '0');
     if (best > 0) {
       this.add.text(W/2, H/2 - 50, `RECORDE: ${best.toLocaleString('pt-BR')} pts`, {
-        ...ps('7px', '#ff8800', 3),
+        ...ps('8px', '#ff8800', 3),
       }).setOrigin(0.5);
     } else {
       this.add.text(W/2, H/2 - 50, 'Sem recorde ainda — seja o primeiro!', {
-        ...ps('6px', '#555555', 2),
+        ...ps('8px', '#555555', 2),
       }).setOrigin(0.5);
     }
   }
 
   _buildPlayButton() {
-    const btn = this.add.rectangle(W/2, H/2 + 14, 280, 52, COLOR.WALL)
+    const btn = this.add.rectangle(W/2, H/2 + 14, 280, 46, COLOR.WALL)
       .setStrokeStyle(3, COLOR.WALL_GLOW)
       .setInteractive({ useHandCursor: true });
 
     const btnTxt = this.add.text(W/2, H/2 + 14, 'JOGAR', {
-      ...ps('16px', '#ffffff', 5),
+      ...ps('12px', '#ffffff', 5),
     }).setOrigin(0.5);
 
     btn.on('pointerover', () => {
@@ -113,7 +130,7 @@ export default class MenuScene extends Phaser.Scene {
 
     // "Pressione ESPAÇO" piscando como alternativa
     const hint = this.add.text(W/2, H/2 + 56, 'ou pressione ESPAÇO', {
-      ...ps('6px', '#ffffff55', 2),
+      ...ps('8px', '#ffffff55', 2),
     }).setOrigin(0.5);
 
     this.tweens.add({
@@ -137,7 +154,6 @@ export default class MenuScene extends Phaser.Scene {
       ['WASD', 'mover'],
       ['MOUSE1', 'atirar'],
       ['R', 'recarregar'],
-      ['E', 'mystery box'],
       ['ESC', 'pausar'],
     ];
 
@@ -145,18 +161,18 @@ export default class MenuScene extends Phaser.Scene {
     const itemW  = totalW / items.length;
     items.forEach(([key, action], i) => {
       const ix = bx - totalW/2 + itemW * i + itemW/2;
-      this.add.text(ix, by - 8, key, { ...ps('5px', '#ffd740', 2) }).setOrigin(0.5);
-      this.add.text(ix, by + 8, action, { ...ps('5px', '#aaaaaa', 1) }).setOrigin(0.5);
+      this.add.text(ix, by - 8, key,    { ...ps('8px', '#ffd740', 2) }).setOrigin(0.5);
+      this.add.text(ix, by + 8, action, { ...ps('8px', '#aaaaaa', 1) }).setOrigin(0.5);
     });
   }
 
   _buildFooter() {
     this.add.text(8, H - 8, 'v1.0', {
-      ...ps('5px', '#ffffff22', 0),
+      ...ps('8px', '#ffffff22', 0),
     }).setOrigin(0, 1);
 
     this.add.text(W - 8, H - 8, 'Burger Royale', {
-      ...ps('5px', '#ffffff22', 0),
+      ...ps('8px', '#ffffff22', 0),
     }).setOrigin(1, 1);
   }
 

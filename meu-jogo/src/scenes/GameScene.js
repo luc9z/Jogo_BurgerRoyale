@@ -64,6 +64,7 @@ export default class GameScene extends Phaser.Scene {
     this.load.audio('sfx-clown-hit',    'assets/audio/clown-hit.mp3');
     this.load.audio('sfx-clown-laugh',  'assets/audio/clown-laugh.mp3');
     this.load.audio('bgm',              'assets/audio/background-music.mp3');
+    this.load.audio('victory-music',    'assets/audio/victory-music.mp3');
   }
 
   // ── CREATE ───────────────────────────────────────────────
@@ -458,7 +459,13 @@ export default class GameScene extends Phaser.Scene {
     unlockLevel(MAX_LEVELS);
     const isNew = saveBest(this.score);
 
-    this._playVictoryFanfare();
+    // Música de vitória (arquivo). Fallback para a fanfarra sintetizada.
+    if (this.cache.audio.exists('victory-music')) {
+      this._victoryMusic = this.sound.add('victory-music', { volume: 0.6 });
+      this._victoryMusic.play();
+    } else {
+      this._playVictoryFanfare();
+    }
 
     const { WIDTH: W, HEIGHT: H } = GAME;
     const D = DEPTH.OVERLAY;
@@ -506,11 +513,13 @@ export default class GameScene extends Phaser.Scene {
       };
 
       mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, () => {
+        if (this._victoryMusic) this._victoryMusic.stop();
         if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
         if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
         this.scene.start('GameScene', { startLevel: 1 });
       });
       mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555, () => {
+        if (this._victoryMusic) this._victoryMusic.stop();
         this.scene.stop('UpgradeScene');
         this.scene.stop('PauseScene');
         this.scene.start('MenuScene');

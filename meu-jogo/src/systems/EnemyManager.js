@@ -10,6 +10,10 @@ export default class EnemyManager {
     this.roundActive = false;
     this._spawnLeft  = 0;
     this._ending     = false;
+
+    scene.events.on('boss-spawn-minions', (bx, by, count) => {
+      this._spawnMinionsAt(bx, by, count);
+    });
   }
 
   startRound() {
@@ -221,6 +225,22 @@ export default class EnemyManager {
   endRound() {
     this._ending     = true;
     this.roundActive = false;
+  }
+
+  _spawnMinionsAt(bx, by, count) {
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2;
+      const r  = 80 + Math.random() * 50;
+      const mx = Phaser.Math.Clamp(bx + Math.cos(angle) * r, ARENA.X + 60, ARENA.X + ARENA.W - 60);
+      const my = Phaser.Math.Clamp(by + Math.sin(angle) * r, ARENA.Y + 60, ARENA.Y + ARENA.H - 60);
+      this.scene.time.delayedCall(i * 220, () => {
+        if (this.scene.isGameOver) return;
+        const type = Math.random() < 0.5 ? 'clown-skinny' : 'clown';
+        this._showSpawnMarker(mx, my, false, () => {
+          this.enemies.push(new Enemy(this.scene, mx, my, this.round, type));
+        });
+      });
+    }
   }
 
   get aliveCount() {

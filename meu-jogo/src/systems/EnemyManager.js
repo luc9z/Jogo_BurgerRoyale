@@ -12,10 +12,59 @@ export default class EnemyManager {
     this._ending     = false;
   }
 
+  // ── PONTOS DE SPAWN FIXOS ────────────────────────────────
+  // 8 "portais" na borda da arena: 4 cantos + 4 meios das laterais.
+  // Inimigos só surgem nesses lugares definidos (nunca do nada perto
+  // do jogador). Calculado uma vez.
+  _spawnPoints() {
+    if (this._pts) return this._pts;
+    const m  = 26; // margem da borda (surgem colados na parede)
+    const x0 = ARENA.X + m,            x1 = ARENA.X + ARENA.W - m;
+    const y0 = ARENA.Y + m,            y1 = ARENA.Y + ARENA.H - m;
+    const xc = (x0 + x1) / 2,          yc = (y0 + y1) / 2;
+    this._pts = [
+      { x: x0, y: y0 }, { x: xc, y: y0 }, { x: x1, y: y0 }, // topo
+      { x: x0, y: yc },                   { x: x1, y: yc },  // laterais
+      { x: x0, y: y1 }, { x: xc, y: y1 }, { x: x1, y: y1 }, // base
+    ];
+    return this._pts;
+  }
+
+  // Marcadores estáticos permanentes — jogador vê de onde vêm os palhaços
+  _drawPortals() {
+    if (this._portalGfx) return;
+    const g = this._portalGfx = this.scene.add.graphics().setDepth(1);
+    for (const p of this._spawnPoints()) {
+      g.fillStyle(0xff3300, 0.10); g.fillCircle(p.x, p.y, 26);
+      g.lineStyle(2, 0xff5500, 0.35); g.strokeCircle(p.x, p.y, 20);
+      g.lineStyle(1, 0xffaa00, 0.30);
+      g.lineBetween(p.x - 7, p.y, p.x + 7, p.y);
+      g.lineBetween(p.x, p.y - 7, p.x, p.y + 7);
+    }
+    // pulso suave de vida nos portais
+    this.scene.tweens.add({
+      targets: g, alpha: 0.55,
+      duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+  }
+
+  // Escolhe portal — sempre longe do jogador (justo)
+  _pickSpawn() {
+    const pts = this._spawnPoints();
+    if (this._px == null) return Phaser.Utils.Array.GetRandom(pts);
+    const sorted = [...pts].sort((a, b) =>
+      Phaser.Math.Distance.Between(b.x, b.y, this._px, this._py) -
+      Phaser.Math.Distance.Between(a.x, a.y, this._px, this._py),
+    );
+    // entre os 4 mais distantes do jogador
+    return Phaser.Utils.Array.GetRandom(sorted.slice(0, 4));
+  }
+
   startRound() {
     this.round++;
     this.roundActive = false;
     this._ending     = false;
+    this._drawPortals();
 
     const count = Math.min(
       ROUND.BASE_COUNT + (this.round - 1) * ROUND.PER_ROUND,
@@ -34,7 +83,8 @@ export default class EnemyManager {
 
   _spawnWave(total) {
     let spawned    = 0;
-    const isBoss   = this.round >= 3 && this.round % 3 === 0;
+    // Chefe lidera a horda a partir do round 3 (antes só em 3,6,9...).
+    const isBoss   = this.round >= 3;
     const spawnMs  = Math.max(160, ROUND.SPAWN_MS - (this.round - 1) * 28);
 
     if (isBoss) {
@@ -53,9 +103,11 @@ export default class EnemyManager {
 
   _spawnBoss() {
     this._spawnLeft = Math.max(0, this._spawnLeft - 1);
-    const bx = ARENA.X + ARENA.W / 2;
-    const by = ARENA.Y + 90;
-    this.enemies.push(new Enemy(this.scene, bx, by, this.round, 'clown-boss'));
+    // Chefe entra pelo portal do topo-centro
+    const p = this._spawnPoints()[1];
+    this._showSpawnMarker(p.x, p.y, true, () => {
+      this.enemies.push(new Enemy(this.scene, p.x, p.y, this.round, 'clown-boss'));
+    });
   }
 
   _pickType() {
@@ -80,16 +132,7 @@ export default class EnemyManager {
   _spawnOne() {
     this._spawnLeft = Math.max(0, this._spawnLeft - 1);
 
-    const pad = 80;
-    const side = Phaser.Math.Between(0, 3);
-    const ax = ARENA.X + pad, ay = ARENA.Y + pad;
-    const aw = ARENA.W - pad * 2, ah = ARENA.H - pad * 2;
-    let ex, ey;
-    if      (side === 0) { ex = Phaser.Math.Between(ax, ax + aw); ey = ARENA.Y + pad; }
-    else if (side === 1) { ex = ARENA.X + ARENA.W - pad; ey = Phaser.Math.Between(ay, ay + ah); }
-    else if (side === 2) { ex = Phaser.Math.Between(ax, ax + aw); ey = ARENA.Y + ARENA.H - pad; }
-    else                 { ex = ARENA.X + pad; ey = Phaser.Math.Between(ay, ay + ah); }
-
+    const { x: ex, y: ey } = this._pickSpawn();
     const type = this._pickType();
     this._showSpawnMarker(ex, ey, false, () => {
       this.enemies.push(new Enemy(this.scene, ex, ey, this.round, type));
@@ -127,6 +170,7 @@ export default class EnemyManager {
   }
 
   update(tx, ty) {
+    this._px = tx; this._py = ty;
     this.enemies = this.enemies.filter(e => {
       if (!e.isDead) return true;
       return e.sprite?.active === true;
@@ -189,7 +233,7 @@ export default class EnemyManager {
       for (const e of this.enemies) {
         if (e.isDead) continue;
         const d = Phaser.Math.Distance.Between(b.x, b.y, e.x, e.y);
-        if (d < ENEMY.HIT_RADIUS) {
+        if (d < e.hitRadius) {
           const dx = e.x - b.x, dy = e.y - b.y;
           const len = Math.hypot(dx, dy) || 1;
           e.takeDamage(b._damage ?? BULLET.DAMAGE, { x: dx/len, y: dy/len });
@@ -205,7 +249,7 @@ export default class EnemyManager {
     for (const e of this.enemies) {
       if (e.isDead) continue;
       const d = Phaser.Math.Distance.Between(player.x, player.y, e.x, e.y);
-      if (d < 34) {
+      if (d < Math.max(34, e.hitRadius * 0.6)) {
         player.takeDamage(ENEMY.CONTACT_HEARTS);
         return;
       }

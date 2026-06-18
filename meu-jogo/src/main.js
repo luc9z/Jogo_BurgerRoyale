@@ -1,9 +1,10 @@
 import Phaser       from 'phaser';
 import { GAME }     from './constants.js';
-import MenuScene    from './scenes/MenuScene.js';
-import GameScene    from './scenes/GameScene.js';
-import PauseScene   from './scenes/PauseScene.js';
-import UpgradeScene from './scenes/UpgradeScene.js';
+import MenuScene        from './scenes/MenuScene.js';
+import LevelSelectScene from './scenes/LevelSelectScene.js';
+import GameScene        from './scenes/GameScene.js';
+import PauseScene       from './scenes/PauseScene.js';
+import UpgradeScene     from './scenes/UpgradeScene.js';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -18,5 +19,5 @@ new Phaser.Game({
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
   physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
-  scene: [MenuScene, GameScene, PauseScene, UpgradeScene],
+  scene: [MenuScene, LevelSelectScene, GameScene, PauseScene, UpgradeScene],
 });

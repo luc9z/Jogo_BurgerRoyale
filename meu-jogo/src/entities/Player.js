@@ -167,6 +167,16 @@ export default class Player {
       return;
     }
 
+    // Mão segurando a arma — conecta a arma ao corpo (sem ficar "flutuando")
+    g.fillStyle(0x3a2412, 1);
+    g.fillCircle(ox, oy, st.bodyH * 0.65 + 2);
+    g.fillStyle(0xe7b98a, 1);
+    g.fillCircle(ox, oy, st.bodyH * 0.65);
+
+    // Contorno escuro atrás (silhueta) → destaca a arma do fundo
+    box(0, st.bodyLen, st.bodyH + 1.6, 0x140b05);
+    box(st.bodyLen, st.barrelLen, st.barrelH + 1.6, 0x140b05);
+
     // Corpo / grip (mais largo, mais escuro)
     box(0, st.bodyLen, st.bodyH, st.bodyCol);
     // Cano (mais fino, mais claro)
@@ -340,7 +350,7 @@ export default class Player {
       const t  = dx * cos + dy * sin;
       if (t < 0 || t > hitDist) continue;
       const perp = Math.abs(dx * sin - dy * cos);
-      if (perp < 32) { hitDist = t; hitEnemy = e; }
+      if (perp < (e.hitRadius ?? 32)) { hitDist = t; hitEnemy = e; }
     }
 
     const ex = bx + cos * hitDist;
@@ -509,6 +519,29 @@ export default class Player {
     this.isReloading = false;
     this.canShoot    = true;
     this.scene.events.emit('reload-done');
+  }
+
+  // ── ESTADO (para snapshot de fase) ───────────────────────
+  serialize() {
+    return {
+      weaponKey:  this.weaponKey,
+      hearts:     this.hearts,
+      speedBonus: this._speedBonus,
+      damageMult: this._damageMult,
+      reloadMult: this._reloadMult,
+    };
+  }
+
+  applyState(st) {
+    if (!st) return;
+    if (st.weaponKey && st.weaponKey in WEAPONS) this.changeWeapon(st.weaponKey);
+    if (typeof st.hearts === 'number') {
+      this.hearts = Phaser.Math.Clamp(st.hearts, 1, PLAYER.MAX_HEARTS);
+      this.scene.events.emit('hearts-changed', this.hearts);
+    }
+    this._speedBonus = st.speedBonus ?? 0;
+    this._damageMult = st.damageMult ?? 1.0;
+    this._reloadMult = st.reloadMult ?? 1.0;
   }
 
   get x() { return this.sprite.x; }

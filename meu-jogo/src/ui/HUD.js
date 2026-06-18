@@ -1,4 +1,5 @@
 import { GAME, PLAYER, COLOR, DEPTH, WEAPONS, EVT } from '../constants.js';
+import { txt, FONT } from './text.js';
 
 const WEAPON_COLOR = {
   pistol:       0x999999,
@@ -24,11 +25,7 @@ export default class HUD {
     const D = DEPTH.HUD;
     this._D = D;
 
-    const ps = (sz, col = '#ffffff', stroke = 4) => ({
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: sz, color: col,
-      stroke: '#000000', strokeThickness: stroke,
-    });
+    const ps = (px, col = '#ffffff', stroke) => txt(px, col, stroke);
 
     // ── Painel esquerdo ─────────────────────────────────────
     const lx = 10, ly = 4, lw = 285, lh = 100;
@@ -38,27 +35,27 @@ export default class HUD {
     this._lx = lx; this._ly = ly; this._lw = lw;
 
     // ── Corações ────────────────────────────────────────────
-    s.add.text(lx + 8, ly + 12, 'HP', ps('8px', '#ff5555')).setDepth(D + 1);
+    s.add.text(lx + 8, ly + 12, 'HP', ps(FONT.BODY, '#ff5555')).setDepth(D + 1);
     this._heartGfx     = s.add.graphics().setDepth(D + 2);
     this._heartOriginX = lx + 48;
     this._heartOriginY = ly + 8;
     this._drawHearts(PLAYER.MAX_HEARTS);
 
     // ── Ammo ────────────────────────────────────────────────
-    s.add.text(lx + 8, ly + 38, 'AMMO', ps('8px', '#ffdd44')).setDepth(D + 1);
+    s.add.text(lx + 8, ly + 38, 'AMMO', ps(FONT.BODY, '#ffdd44')).setDepth(D + 1);
     this._ammoIcons   = [];
     this._ammoDepth   = D + 2;
     this._ammoOriginX = lx + 64;
     this._ammoOriginY = ly + 40;
     this._rebuildAmmoIcons(WEAPONS.pistol.clipSize);
-    this._reloadLbl = s.add.text(lx + 64, ly + 40, '', ps('8px', '#ff8800')).setDepth(D + 3);
+    this._reloadLbl = s.add.text(lx + 64, ly + 40, '', ps(FONT.BODY, '#ff8800')).setDepth(D + 3);
 
     // ── Arma atual ──────────────────────────────────────────
-    s.add.text(lx + 8, ly + 68, 'ARMA', ps('8px', '#aaaaff')).setDepth(D + 1);
+    s.add.text(lx + 8, ly + 68, 'ARMA', ps(FONT.BODY, '#aaaaff')).setDepth(D + 1);
 
     this._weaponDot = s.add.circle(lx + 64, ly + 72, 5, 0x999999, 1).setDepth(D + 2);
 
-    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps('8px', '#ffffff', 3))
+    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps(FONT.BODY, '#ffffff', 3))
       .setDepth(D + 3);
 
     // ── Painel direito (pontos + round) ─────────────────────
@@ -67,35 +64,24 @@ export default class HUD {
     rb.fillStyle(COLOR.HUD_BG, 0.92); rb.fillRoundedRect(rx, ry, rw, rh, 6);
     rb.lineStyle(1.5, COLOR.HUD_BORDER, 1); rb.strokeRoundedRect(rx, ry, rw, rh, 6);
 
-    s.add.text(rx + 10, ry + 10, 'PONTOS', ps('8px', '#ffd740')).setDepth(D + 1);
-    this._scoreTxt = s.add.text(rx + rw - 10, ry + 10, '0', ps('12px', '#ffd740')).setOrigin(1, 0).setDepth(D + 2);
-    s.add.text(rx + 10, ry + 40, 'ROUND',  ps('8px', '#ff8800')).setDepth(D + 1);
-    this._roundTxt = s.add.text(rx + rw - 10, ry + 40, '1', ps('12px', '#ff8800')).setOrigin(1, 0).setDepth(D + 2);
+    s.add.text(rx + 10, ry + 10, 'PONTOS', ps(FONT.BODY, '#ffd740')).setDepth(D + 1);
+    this._scoreTxt = s.add.text(rx + rw - 10, ry + 10, '0', ps(FONT.VALUE, '#ffd740')).setOrigin(1, 0).setDepth(D + 2);
+    s.add.text(rx + 10, ry + 40, 'ROUND',  ps(FONT.BODY, '#ff8800')).setDepth(D + 1);
+    this._roundTxt = s.add.text(rx + rw - 10, ry + 40, '1', ps(FONT.VALUE, '#ff8800')).setOrigin(1, 0).setDepth(D + 2);
 
     // ── Inimigos restantes ──────────────────────────────────
-    this._enemyTxt = s.add.text(W / 2, 14, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '8px', color: '#ff5555',
-      stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5, 0).setDepth(D + 1);
+    this._enemyTxt = s.add.text(W / 2, 14, '', txt(FONT.BODY, '#ff5555'))
+      .setOrigin(0.5, 0).setDepth(D + 1);
 
     // ── Banners ─────────────────────────────────────────────
-    this._banner = s.add.text(W / 2, H / 2 - 40, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '28px', color: '#ffd740',
-      stroke: '#000000', strokeThickness: 9,
-    }).setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
+    this._banner = s.add.text(W / 2, H / 2 - 40, '', txt(FONT.TITLE, '#ffd740'))
+      .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
-    this._bannerSub = s.add.text(W / 2, H / 2 + 14, '', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '8px', color: '#ff8800',
-      stroke: '#000', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
+    this._bannerSub = s.add.text(W / 2, H / 2 + 14, '', txt(FONT.BODY, '#ff8800'))
+      .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
-    s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar', {
-      fontFamily: '"Press Start 2P", monospace',
-      fontSize: '8px', color: '#ffffff22',
-    }).setOrigin(0.5, 1).setDepth(D);
+    s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar', txt(FONT.BODY, '#ffffff22'))
+      .setOrigin(0.5, 1).setDepth(D);
   }
 
   // ── Corações pixel art ───────────────────────────────────
@@ -153,16 +139,27 @@ export default class HUD {
   }
 
   // ── Eventos ──────────────────────────────────────────────
+  // IMPORTANTE: scene.events SOBREVIVE ao scene.restart() (JOGAR NOVAMENTE).
+  // Sem remover no shutdown, cada reinício empilha um HUD novo cujos listeners
+  // apontam para textos já destruídos → HUD quebra / erros. Guardamos refs e
+  // limpamos no shutdown.
   _listen() {
     const s = this.scene;
-    s.events.on('hearts-changed',    h      => this._setHearts(h));
-    s.events.on('score-changed',     sc     => this._scoreTxt.setText(sc.toLocaleString('pt-BR')));
-    s.events.on('round-changed',     r      => this._roundTxt.setText(String(r)));
-    s.events.on('ammo-changed',      a      => this._setAmmo(a));
-    s.events.on('reload-start',      ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText('RECARREGANDO...'); });
-    s.events.on('reload-done',       ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText(''); });
-    s.events.on('show-round-banner', (r, c) => this._showBanner(r, c));
-    s.events.on(EVT.WEAPON_CHANGED,  key    => this._onWeaponChanged(key));
+    const h = this._handlers = {
+      'hearts-changed':    n      => this._setHearts(n),
+      'score-changed':     sc     => this._scoreTxt.setText(sc.toLocaleString('pt-BR')),
+      'round-changed':     r      => this._roundTxt.setText(String(r)),
+      'ammo-changed':      a      => this._setAmmo(a),
+      'reload-start':      ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText('RECARREGANDO...'); },
+      'reload-done':       ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText(''); },
+      'show-round-banner': (r, c) => this._showBanner(r, c),
+      [EVT.WEAPON_CHANGED]: key   => this._onWeaponChanged(key),
+    };
+    for (const evt in h) s.events.on(evt, h[evt]);
+
+    s.events.once('shutdown', () => {
+      for (const evt in h) s.events.off(evt, h[evt]);
+    });
   }
 
   _setHearts(filled) {

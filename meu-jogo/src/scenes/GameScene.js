@@ -1,13 +1,23 @@
 import Phaser from 'phaser';
 import {
-  GAME, ARENA, COLOR, DEPTH, EVT, WEAPONS, PLAYER,
+  GAME, ARENA, COLOR, DEPTH, EVT, WEAPONS, PLAYER, MAX_LEVELS,
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
 import HUD          from '../ui/HUD.js';
+import { txt, FONT } from '../ui/text.js';
+import {
+  getUnlocked, unlockLevel, saveSnapshot, loadSnapshot,
+  markCompleted, saveBest,
+} from '../systems/progress.js';
 
 export default class GameScene extends Phaser.Scene {
   constructor() { super('GameScene'); }
+
+  // scene.start('GameScene', { startLevel }) — fase escolhida no menu
+  init(data) {
+    this._startLevel = Math.max(1, Math.min(MAX_LEVELS, data?.startLevel ?? 1));
+  }
 
   // ── PRELOAD ──────────────────────────────────────────────
   preload() {
@@ -16,18 +26,12 @@ export default class GameScene extends Phaser.Scene {
 
     const { WIDTH: W, HEIGHT: H } = GAME;
     this.add.rectangle(W/2, H/2, W, H, 0x08000d);
-    this.add.text(W/2, H/2 - 36, 'BURGER ROYALE', {
-      fontFamily: '"Press Start 2P", monospace', fontSize: '20px', color: '#ffd740',
-    }).setOrigin(0.5);
-    this.add.text(W/2, H/2 - 4, 'CLOWN APOCALYPSE', {
-      fontFamily: '"Press Start 2P", monospace', fontSize: '10px', color: '#cc3300',
-    }).setOrigin(0.5);
+    this.add.text(W/2, H/2 - 36, 'BURGER ROYALE', txt(FONT.TITLE, '#ffd740')).setOrigin(0.5);
+    this.add.text(W/2, H/2 - 4, 'CLOWN APOCALYPSE', txt(FONT.BODY, '#cc3300')).setOrigin(0.5);
 
     this.add.rectangle(W/2, H/2 + 28, 304, 16, 0x1a0008).setStrokeStyle(2, 0x8b1a00);
     const bar = this.add.rectangle(W/2 - 150, H/2 + 28, 0, 12, 0xd4a000).setOrigin(0, 0.5);
-    const pct = this.add.text(W/2, H/2 + 50, '0%', {
-      fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#ff8800',
-    }).setOrigin(0.5);
+    const pct = this.add.text(W/2, H/2 + 50, '0%', txt(FONT.BODY, '#ff8800')).setOrigin(0.5);
 
     this.load.on('progress', v => { bar.width = 300 * v; pct.setText(Math.floor(v*100)+'%'); });
     this.load.on('loaderror', f => console.error('Load error:', f.key, f.src));
@@ -99,10 +103,14 @@ export default class GameScene extends Phaser.Scene {
       this.events.emit('score-changed', this.score);
     };
     const onDead = () => this._gameOver();
+    // Salva progresso quando uma fase começa: desbloqueia + snapshot do
+    // estado de ENTRADA (permite começar direto por essa fase no menu).
+    const onRoundStart = r => this._saveProgress(r);
 
     this.events.on('resume', onResume);
     this.events.on(EVT.ENEMY_KILLED, onKilled);
     this.events.on(EVT.PLAYER_DEAD, onDead);
+    this.events.on('round-changed', onRoundStart);
 
     this._setupPickups();
 
@@ -110,10 +118,22 @@ export default class GameScene extends Phaser.Scene {
       this.events.off('resume', onResume);
       this.events.off(EVT.ENEMY_KILLED, onKilled);
       this.events.off(EVT.PLAYER_DEAD, onDead);
+      this.events.off('round-changed', onRoundStart);
       this.events.off('drop-heal', this._onDropHeal);
       this.events.off('show-boss-warning', this._onBossWarning);
       if (this._bgm) { this._bgm.stop(); this._bgm.destroy(); this._bgm = null; }
     });
+
+    // Começar numa fase liberada → restaura o estado salvo daquela fase
+    if (this._startLevel > 1) {
+      const snap = loadSnapshot(this._startLevel);
+      if (snap) {
+        this.player.applyState(snap);
+        this.score = snap.score ?? 0;
+        this.events.emit('score-changed', this.score);
+      }
+      this.enemies.round = this._startLevel - 1; // startRound() faz ++ → fase certa
+    }
 
     this.enemies.startRound();
 
@@ -146,11 +166,16 @@ export default class GameScene extends Phaser.Scene {
     this._checkPickups();
 
     if (!this._roundEnding && this.enemies.isRoundComplete()) {
-      this._roundEnding      = true;
-      this._pendingNextRound = true;
+      this._roundEnding = true;
       this.enemies.endRound();
       this.player.reloadFull();
-      this.hud.showRoundClear(this.enemies.round);
+
+      const cleared = this.enemies.round;
+      // Limpou a última fase → vitória (sem mais rounds)
+      if (cleared >= MAX_LEVELS) { this._victory(); return; }
+
+      this._pendingNextRound = true;
+      this.hud.showRoundClear(cleared);
 
       this.time.delayedCall(1800, () => {
         if (this.isGameOver || this._paused) return;
@@ -183,6 +208,13 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // Desbloqueia a fase + grava snapshot do estado de entrada nela
+  _saveProgress(level) {
+    if (!this.player) return;
+    unlockLevel(level);
+    saveSnapshot(level, { ...this.player.serialize(), score: this.score });
+  }
+
   // ── PICKUPS DE CURA ──────────────────────────────────────
   _setupPickups() {
     this._onDropHeal = (x, y) => {
@@ -207,11 +239,8 @@ export default class GameScene extends Phaser.Scene {
 
     this._onBossWarning = () => {
       const { WIDTH: W, HEIGHT: H } = GAME;
-      const lbl = this.add.text(W/2, H/2 - 72, '⚠  CHEFE CHEGANDO!  ⚠', {
-        fontFamily: '"Press Start 2P", monospace',
-        fontSize: '18px', color: '#ff0000',
-        stroke: '#000', strokeThickness: 8,
-      }).setOrigin(0.5).setDepth(DEPTH.BANNER + 1).setAlpha(0);
+      const lbl = this.add.text(W/2, H/2 - 72, '⚠  CHEFE CHEGANDO!  ⚠', txt(FONT.TITLE, '#ff0000'))
+        .setOrigin(0.5).setDepth(DEPTH.BANNER + 1).setAlpha(0);
       this.tweens.add({
         targets: lbl, alpha: 1, duration: 220, yoyo: true, repeat: 5,
         onComplete: () => lbl.destroy(),
@@ -344,26 +373,23 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: ov, fillAlpha: 0.84, duration: 700 });
 
     this.time.delayedCall(450, () => {
-      const ps = (sz, col) => ({
-        fontFamily: '"Press Start 2P", monospace', fontSize: sz, color: col,
-        stroke: '#000', strokeThickness: 6,
-      });
+      const ps = (px, col, stroke) => txt(px, col, stroke);
 
-      this.add.text(W/2, H/2-110, 'GAME OVER',               ps('28px','#ff2200')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-68,  'Os palhaços venceram...', ps('8px','#ffaa00')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-40,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps('10px','#ffd740')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-16,  `Rounds: ${this.enemies.round}`, ps('8px','#ff8800')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-110, 'GAME OVER',               ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-64,  'Os palhaços venceram...', ps(FONT.BODY,'#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-36,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE,'#ffd740')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-8,   `Rounds: ${this.enemies.round}`, ps(FONT.BODY,'#ff8800')).setOrigin(0.5).setDepth(D+1);
       if (isNew) {
-        this.add.text(W/2, H/2+12, '✦ NOVO RECORDE! ✦', ps('8px','#ffd740')).setOrigin(0.5).setDepth(D+1);
+        this.add.text(W/2, H/2+18, '✦ NOVO RECORDE! ✦', ps(FONT.BODY,'#ffd740')).setOrigin(0.5).setDepth(D+1);
       }
 
       const mkBtn = (y, label, col, onClick) => {
         const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
           .setStrokeStyle(2, col).setDepth(D+1)
           .setInteractive({ useHandCursor: true });
-        const txt = this.add.text(W/2, y, label, ps('8px', '#ffffff')).setOrigin(0.5).setDepth(D+2);
-        btn.on('pointerover', () => { btn.setFillStyle(0x1a001a); this.tweens.add({ targets:[btn,txt], scaleX:1.05, scaleY:1.05, duration:60 }); });
-        btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,txt], scaleX:1,    scaleY:1,    duration:60 }); });
+        const label2 = this.add.text(W/2, y, label, ps(FONT.BODY, '#ffffff')).setOrigin(0.5).setDepth(D+2);
+        btn.on('pointerover', () => { btn.setFillStyle(0x1a001a); this.tweens.add({ targets:[btn,label2], scaleX:1.05, scaleY:1.05, duration:60 }); });
+        btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,label2], scaleX:1,    scaleY:1,    duration:60 }); });
         btn.on('pointerdown', onClick);
       };
 
@@ -373,6 +399,118 @@ export default class GameScene extends Phaser.Scene {
         this.scene.start('GameScene');
       });
       mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555, () => {
+        this.scene.stop('UpgradeScene');
+        this.scene.stop('PauseScene');
+        this.scene.start('MenuScene');
+      });
+    });
+  }
+
+  // Fanfarra de vitória sintetizada (WebAudio) — sem arquivo externo.
+  _playVictoryFanfare() {
+    const ctx = this.sound?.context;
+    if (!ctx || ctx.state === 'closed' || this.sound.mute) return;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now    = ctx.currentTime + 0.05;
+    const master = ctx.createGain();
+    master.gain.value = 0.32;
+    master.connect(ctx.destination);
+
+    const note = (freq, start, dur, type = 'triangle', vol = 0.22) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now + start);
+      g.gain.linearRampToValueAtTime(vol, now + start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+      o.connect(g); g.connect(master);
+      o.start(now + start);
+      o.stop(now + start + dur + 0.05);
+    };
+
+    // Arpejo de Dó maior subindo + acorde final triunfante
+    const C = 523.25, E = 659.25, G = 783.99, C2 = 1046.5, Glow = 196.0;
+    note(Glow,  0.00, 0.25, 'sawtooth', 0.10);   // baixo
+    note(C / 2, 0.22, 0.70, 'sawtooth', 0.10);
+    note(C,  0.00, 0.16);
+    note(E,  0.16, 0.16);
+    note(G,  0.32, 0.16);
+    note(C2, 0.48, 0.55);
+    // acorde final
+    note(C,  1.00, 0.95, 'triangle', 0.16);
+    note(E,  1.00, 0.95, 'triangle', 0.14);
+    note(G,  1.00, 0.95, 'triangle', 0.14);
+    note(C2, 1.00, 0.95, 'triangle', 0.12);
+  }
+
+  // ── VITÓRIA (limpou a fase 5) ────────────────────────────
+  _victory() {
+    if (this._goShown) return;
+    this._goShown   = true;
+    this.isGameOver = true;
+    this.physics.pause();
+    if (this._bgm) this._bgm.stop();
+    this.input.setDefaultCursor('default');
+
+    markCompleted();
+    unlockLevel(MAX_LEVELS);
+    const isNew = saveBest(this.score);
+
+    this._playVictoryFanfare();
+
+    const { WIDTH: W, HEIGHT: H } = GAME;
+    const D = DEPTH.OVERLAY;
+    const ps = (px, col, stroke) => txt(px, col, stroke);
+
+    const ov = this.add.rectangle(W/2, H/2, W, H, 0x0a0500, 0).setDepth(D);
+    this.tweens.add({ targets: ov, fillAlpha: 0.9, duration: 700 });
+
+    // Confete dourado caindo
+    for (let i = 0; i < 40; i++) {
+      const cols = [0xffd740, 0xff8800, 0x44ff88, 0x00aaff, 0xff2244];
+      const c = this.add.rectangle(
+        Phaser.Math.Between(0, W), Phaser.Math.Between(-H, 0),
+        Phaser.Math.Between(4, 8), Phaser.Math.Between(4, 8),
+        cols[i % cols.length], 1,
+      ).setDepth(D).setAngle(Phaser.Math.Between(0, 360));
+      this.tweens.add({
+        targets: c, y: H + 20, angle: c.angle + 360,
+        duration: Phaser.Math.Between(2200, 4200), delay: Phaser.Math.Between(0, 1500),
+        repeat: -1, ease: 'Linear',
+        onRepeat: () => { c.y = -20; c.x = Phaser.Math.Between(0, W); },
+      });
+    }
+
+    this.time.delayedCall(450, () => {
+      const title = this.add.text(W/2, H/2-104, 'VITÓRIA!', ps(FONT.HERO, '#ffd740'))
+        .setOrigin(0.5).setDepth(D+1);
+      this.tweens.add({ targets: title, scaleX: 1.06, scaleY: 1.06, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+      this.add.text(W/2, H/2-58, 'Você sobreviveu ao apocalipse dos palhaços!', ps(FONT.BODY, '#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-30, `Pontuação final: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE, '#ffd740')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-2,  `${MAX_LEVELS} fases concluídas`, ps(FONT.BODY, '#44ff88')).setOrigin(0.5).setDepth(D+1);
+      if (isNew) {
+        this.add.text(W/2, H/2+22, '✦ NOVO RECORDE! ✦', ps(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(D+1);
+      }
+
+      const mkBtn = (y, label, col, onClick) => {
+        const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
+          .setStrokeStyle(2, col).setDepth(D+1)
+          .setInteractive({ useHandCursor: true });
+        const lbl = this.add.text(W/2, y, label, ps(FONT.BODY, '#ffffff')).setOrigin(0.5).setDepth(D+2);
+        btn.on('pointerover', () => { btn.setFillStyle(0x1a1400); this.tweens.add({ targets:[btn,lbl], scaleX:1.05, scaleY:1.05, duration:60 }); });
+        btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,lbl], scaleX:1,    scaleY:1,    duration:60 }); });
+        btn.on('pointerdown', onClick);
+      };
+
+      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, () => {
+        if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
+        if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
+        this.scene.start('GameScene', { startLevel: 1 });
+      });
+      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555, () => {
         this.scene.stop('UpgradeScene');
         this.scene.stop('PauseScene');
         this.scene.start('MenuScene');

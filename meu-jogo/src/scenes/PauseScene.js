@@ -1,14 +1,11 @@
 import Phaser from 'phaser';
 import { GAME, COLOR, DEPTH } from '../constants.js';
+import { txt, FONT } from '../ui/text.js';
 
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
 
-const ps = (sz, col = '#ffffff', thick = 4) => ({
-  fontFamily: '"Press Start 2P", monospace',
-  fontSize: sz, color: col,
-  stroke: '#000000', strokeThickness: thick,
-});
+const ps = (px, col = '#ffffff', thick) => txt(px, col, thick);
 
 export default class PauseScene extends Phaser.Scene {
   constructor() { super('PauseScene'); }
@@ -32,9 +29,8 @@ export default class PauseScene extends Phaser.Scene {
     panel.strokeRoundedRect(W/2 - panelW/2, H/2 - panelH/2, panelW, panelH, 8);
 
     // Título PAUSADO
-    const title = this.add.text(W/2, H/2 - 120, 'PAUSADO', {
-      ...ps('22px', '#ffd740', 7),
-    }).setOrigin(0.5).setDepth(2);
+    const title = this.add.text(W/2, H/2 - 120, 'PAUSADO', ps(FONT.TITLE, '#ffd740'))
+      .setOrigin(0.5).setDepth(2);
 
     this.tweens.add({
       targets: title, alpha: 0.7,
@@ -46,7 +42,7 @@ export default class PauseScene extends Phaser.Scene {
       `Pontos: ${this.gameScore.toLocaleString('pt-BR')}`,
       `Round:  ${this.gameRound}   |   Arma: ${this.gameWeapon}`,
     ], {
-      ...ps('8px', '#ff8800', 2),
+      ...ps(FONT.BODY, '#ff8800'),
       align: 'center',
       lineSpacing: 8,
     }).setOrigin(0.5).setDepth(2);
@@ -62,9 +58,8 @@ export default class PauseScene extends Phaser.Scene {
     this._makeBtn(W/2, H/2 + 90,  'MENU PRINCIPAL', 0xcc1100, '#cc1100', () => this._toMenu());
 
     // Dica ESC
-    this.add.text(W/2, H/2 + 132, 'ESC — continuar', {
-      ...ps('8px', '#ffffff44', 1),
-    }).setOrigin(0.5).setDepth(2);
+    this.add.text(W/2, H/2 + 132, 'ESC — continuar', ps(FONT.BODY, '#ffffff44'))
+      .setOrigin(0.5).setDepth(2);
 
     // ESC fecha o pause
     this.input.keyboard.once('keydown-ESC', () => this._resume());
@@ -76,17 +71,16 @@ export default class PauseScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .setDepth(2);
 
-    const txt = this.add.text(x, y, label, {
-      ...ps('8px', textColor, 3),
-    }).setOrigin(0.5).setDepth(3);
+    const label2 = this.add.text(x, y, label, ps(FONT.BODY, textColor))
+      .setOrigin(0.5).setDepth(3);
 
     btn.on('pointerover', () => {
       btn.setFillStyle(0x220028);
-      this.tweens.add({ targets: [btn, txt], scaleX: 1.04, scaleY: 1.04, duration: 60 });
+      this.tweens.add({ targets: [btn, label2], scaleX: 1.04, scaleY: 1.04, duration: 60 });
     });
     btn.on('pointerout', () => {
       btn.setFillStyle(0x110015);
-      this.tweens.add({ targets: [btn, txt], scaleX: 1, scaleY: 1, duration: 60 });
+      this.tweens.add({ targets: [btn, label2], scaleX: 1, scaleY: 1, duration: 60 });
     });
     btn.on('pointerdown', onClick);
   }

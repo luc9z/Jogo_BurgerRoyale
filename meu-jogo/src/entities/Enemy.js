@@ -23,6 +23,11 @@ export default class Enemy {
     );
     this.points = Math.round(ENEMY.POINTS * def.pointsMult);
 
+    // Hitbox proporcional ao tamanho. Antes era fixa (32) p/ todos, então
+    // chefes (scale 1.65) só recebiam dano no centro/"cabeça". Agora escala
+    // com o tamanho — palhaço base (0.6) mantém ~32.
+    this.hitRadius = Math.max(28, ENEMY.HIT_RADIUS * (this.scale / 0.6));
+
     this._driftOffset = Math.random() * Math.PI * 2;
     this._create(x, y);
   }

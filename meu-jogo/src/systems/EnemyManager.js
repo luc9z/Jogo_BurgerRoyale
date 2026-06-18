@@ -9,10 +9,18 @@ export default class EnemyManager {
     this.round       = 0;
     this.roundActive = false;
     this._spawnLeft  = 0;
+    this._pending    = 0; // marcadores de spawn "no ar" (inimigo ainda não criado)
     this._ending     = false;
 
-    scene.events.on('boss-spawn-minions', (bx, by, count) => {
-      this._spawnMinionsAt(bx, by, count);
+    // IMPORTANTE: scene.events PERSISTE entre restarts do GameScene. Se o
+    // listener não for removido no shutdown, cada novo EnemyManager acumula
+    // mais um listener preso a uma instância antiga. Aí o chefe ativo emite
+    // 'boss-spawn-minions' e os managers VELHOS também spawnam minions no
+    // próprio array (que nunca recebe update) → palhaços congelados no mapa.
+    this._onBossSpawnMinions = (bx, by, count) => this._spawnMinionsAt(bx, by, count);
+    scene.events.on('boss-spawn-minions', this._onBossSpawnMinions);
+    scene.events.once('shutdown', () => {
+      scene.events.off('boss-spawn-minions', this._onBossSpawnMinions);
     });
   }
 
@@ -68,6 +76,7 @@ export default class EnemyManager {
     this.round++;
     this.roundActive = false;
     this._ending     = false;
+    this._pending    = 0;
     this._drawPortals();
 
     const count = Math.min(
@@ -109,8 +118,10 @@ export default class EnemyManager {
     this._spawnLeft = Math.max(0, this._spawnLeft - 1);
     // Chefe entra pelo portal do topo-centro
     const p = this._spawnPoints()[1];
+    this._pending++;
     this._showSpawnMarker(p.x, p.y, true, () => {
       this.enemies.push(new Enemy(this.scene, p.x, p.y, this.round, 'clown-boss'));
+      this._pending = Math.max(0, this._pending - 1);
     });
   }
 
@@ -138,8 +149,10 @@ export default class EnemyManager {
 
     const { x: ex, y: ey } = this._pickSpawn();
     const type = this._pickType();
+    this._pending++;
     this._showSpawnMarker(ex, ey, false, () => {
       this.enemies.push(new Enemy(this.scene, ex, ey, this.round, type));
+      this._pending = Math.max(0, this._pending - 1);
     });
   }
 
@@ -263,6 +276,7 @@ export default class EnemyManager {
   isRoundComplete() {
     if (!this.roundActive || this._ending) return false;
     if (this._spawnLeft > 0) return false;
+    if (this._pending > 0) return false; // ainda há inimigos por nascer
     return this.enemies.every(e => e.isDead);
   }
 
@@ -277,11 +291,16 @@ export default class EnemyManager {
       const r  = 80 + Math.random() * 50;
       const mx = Phaser.Math.Clamp(bx + Math.cos(angle) * r, ARENA.X + 60, ARENA.X + ARENA.W - 60);
       const my = Phaser.Math.Clamp(by + Math.sin(angle) * r, ARENA.Y + 60, ARENA.Y + ARENA.H - 60);
+      // Conta como pendente já no AGENDAMENTO: o atraso (i*220) também faz
+      // parte da janela em que o minion não existe ainda. Sem isso o round
+      // podia ser dado como completo antes dos minions nascerem.
+      this._pending++;
       this.scene.time.delayedCall(i * 220, () => {
-        if (this.scene.isGameOver) return;
+        if (this.scene.isGameOver) { this._pending = Math.max(0, this._pending - 1); return; }
         const type = Math.random() < 0.5 ? 'clown-skinny' : 'clown';
         this._showSpawnMarker(mx, my, false, () => {
           this.enemies.push(new Enemy(this.scene, mx, my, this.round, type));
+          this._pending = Math.max(0, this._pending - 1);
         });
       });
     }

@@ -46,13 +46,6 @@ export default class MenuScene extends Phaser.Scene {
     glow.fillStyle(0x6a0010, 1);
     glow.fillCircle(W/2, H/2 - 50, 260);
 
-    // Vinheta nas bordas
-    const vig = this.add.graphics();
-    vig.fillStyle(0x000000, 0.65);
-    vig.fillRect(0, 0,    W, 55);
-    vig.fillRect(0, H-55, W, 55);
-    vig.fillRect(0, 0,    65, H);
-    vig.fillRect(W-65, 0, 65, H);
   }
 
   // ── PERSONAGENS ───────────────────────────────────────────

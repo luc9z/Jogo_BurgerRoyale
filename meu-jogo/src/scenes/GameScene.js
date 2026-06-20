@@ -320,15 +320,7 @@ export default class GameScene extends Phaser.Scene {
   _buildMap() {
     const { WIDTH: W, HEIGHT: H } = GAME;
     this.add.image(W/2, H/2, 'background').setDisplaySize(W, H).setDepth(DEPTH.BG);
-    this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.38).setDepth(DEPTH.BG+1);
-
-    // Vinheta: escurece as bordas para dar profundidade à arena
-    const vig = this.add.graphics().setDepth(DEPTH.BG+1);
-    vig.fillStyle(0x000000, 0.4);
-    vig.fillRect(0, 0, W, ARENA.Y);
-    vig.fillRect(0, ARENA.Y + ARENA.H, W, H - (ARENA.Y + ARENA.H));
-    vig.fillRect(0, 0, ARENA.X, H);
-    vig.fillRect(ARENA.X + ARENA.W, 0, W - (ARENA.X + ARENA.W), H);
+    this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.25).setDepth(DEPTH.BG+1);
 
     this.physics.world.setBounds(ARENA.X, ARENA.Y, ARENA.W, ARENA.H);
 
@@ -374,7 +366,7 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: ov, fillAlpha: 0.84, duration: 700 });
 
     this.time.delayedCall(450, () => {
-      const ps = (px, col, stroke) => txt(px, col, stroke);
+      const ps = txt;
 
       this.add.text(W/2, H/2-110, 'GAME OVER',               ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-64,  'Os palhaços venceram...', ps(FONT.BODY,'#ffaa00')).setOrigin(0.5).setDepth(D+1);
@@ -469,7 +461,7 @@ export default class GameScene extends Phaser.Scene {
 
     const { WIDTH: W, HEIGHT: H } = GAME;
     const D = DEPTH.OVERLAY;
-    const ps = (px, col, stroke) => txt(px, col, stroke);
+    const ps = txt;
 
     const ov = this.add.rectangle(W/2, H/2, W, H, 0x0a0500, 0).setDepth(D);
     this.tweens.add({ targets: ov, fillAlpha: 0.9, duration: 700 });

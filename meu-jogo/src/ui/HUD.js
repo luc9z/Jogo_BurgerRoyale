@@ -25,7 +25,7 @@ export default class HUD {
     const D = DEPTH.HUD;
     this._D = D;
 
-    const ps = (px, col = '#ffffff', stroke) => txt(px, col, stroke);
+    const ps = txt;
 
     // ── Painel esquerdo ─────────────────────────────────────
     const lx = 10, ly = 4, lw = 285, lh = 100;
@@ -55,7 +55,7 @@ export default class HUD {
 
     this._weaponDot = s.add.circle(lx + 64, ly + 72, 5, 0x999999, 1).setDepth(D + 2);
 
-    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps(FONT.BODY, '#ffffff', 3))
+    this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps(FONT.BODY, '#ffffff'))
       .setDepth(D + 3);
 
     // ── Painel direito (pontos + round) ─────────────────────

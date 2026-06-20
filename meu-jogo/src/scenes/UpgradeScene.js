@@ -5,7 +5,7 @@ import { txt, FONT } from '../ui/text.js';
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
 
-const ps = (px, col = '#ffffff', thick) => txt(px, col, thick);
+const ps = txt;
 
 // Armas via upgrade. tier = posição na escada — só aparecem armas de tier
 // MAIOR que a equipada, então a evolução é sempre crescente (nunca volta).

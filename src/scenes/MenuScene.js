@@ -287,13 +287,15 @@ export default class MenuScene extends Phaser.Scene {
   // ── NAVEGAÇÃO CONTROLE ────────────────────────────────────
   _updateGamepad() {
     const pad = this.input.gamepad?.getPad(0);
-    if (!pad) return;
+    if (!pad) { this._gpCursor?.setVisible(false); return; }
+    this._gpCursor?.setVisible(true);
 
+    const ly = pad.leftStick?.y ?? 0;
     const now = {
-      up:    pad.buttons[12]?.pressed || pad.leftStick.y < -0.5,
-      down:  pad.buttons[13]?.pressed || pad.leftStick.y >  0.5,
-      a:     pad.buttons[0]?.pressed,
-      start: pad.buttons[9]?.pressed,
+      up:    !!(pad.buttons[12]?.pressed) || ly < -0.5,
+      down:  !!(pad.buttons[13]?.pressed) || ly >  0.5,
+      a:     !!(pad.buttons[0]?.pressed),
+      start: !!(pad.buttons[9]?.pressed),
     };
     const prev = this._gpPrevs;
 

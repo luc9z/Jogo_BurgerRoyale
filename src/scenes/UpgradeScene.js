@@ -308,11 +308,12 @@ export default class UpgradeScene extends Phaser.Scene {
     const pad = this.input.gamepad?.getPad(0);
     if (!pad || this._gpCards.length === 0) return;
 
+    const lx = pad.leftStick?.x ?? 0;
     const now = {
-      left:  pad.buttons[14]?.pressed || pad.leftStick.x < -0.5,
-      right: pad.buttons[15]?.pressed || pad.leftStick.x >  0.5,
-      a:     pad.buttons[0]?.pressed,
-      b:     pad.buttons[1]?.pressed,
+      left:  !!(pad.buttons[14]?.pressed) || lx < -0.5,
+      right: !!(pad.buttons[15]?.pressed) || lx >  0.5,
+      a:     !!(pad.buttons[0]?.pressed),
+      b:     !!(pad.buttons[1]?.pressed),
     };
     const prev = this._gpPrevs;
 

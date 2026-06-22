@@ -124,44 +124,37 @@ export default class Player {
     const useGamepad = rs && (Math.abs(rs.x) > DEAD || Math.abs(rs.y) > DEAD);
 
     if (useGamepad) {
+      // Controle: stick direito define direção
       const d = Math.hypot(rs.x, rs.y);
       this.lastDir.set(rs.x / d, rs.y / d);
       if (!this._attackLock) this.sprite.setFlipX(rs.x < 0);
+      // Aim assist só aqui — só quando stick sendo usado
+      this._applyAimAssist();
+      this._crosshair.setPosition(
+        this.sprite.x + this.lastDir.x * 150,
+        this.sprite.y + this.lastDir.y * 150,
+      );
     } else {
-      const ptr = this.scene.input.activePointer;
-      const mx  = ptr.x;
-      const my  = ptr.y;
+      // Mouse: crosshair segue ponteiro
+      this._aimAssistGfx.clear();
+      const ptr  = this.scene.input.activePointer;
+      const mx   = ptr.x, my = ptr.y;
       this._crosshair.setPosition(mx, my);
-      const dx = mx - this.sprite.x;
-      const dy = my - this.sprite.y;
+      const dx = mx - this.sprite.x, dy = my - this.sprite.y;
       const dist = Math.hypot(dx, dy);
       if (dist > 10) {
         this.lastDir.set(dx / dist, dy / dist);
         if (!this._attackLock) this.sprite.setFlipX(dx < 0);
       }
     }
-
-    // Aim assist — só com controle conectado
-    if (pad) {
-      this._applyAimAssist();
-    } else {
-      this._aimAssistGfx.clear();
-    }
-
-    if (useGamepad || pad) {
-      this._crosshair.setPosition(
-        this.sprite.x + this.lastDir.x * 150,
-        this.sprite.y + this.lastDir.y * 150,
-      );
-    }
   }
 
   _applyAimAssist() {
     const enemies = this.scene.enemies?.enemies ?? [];
     const px = this.sprite.x, py = this.sprite.y;
-    const RADIUS = 200;
-    const CONE   = Math.PI / 3.5; // ±51°
-    const PULL   = 0.28;
+    const RADIUS = 240;
+    const CONE   = Math.PI / 9; // ±20° — só inimigos no foco
+    const PULL   = 0.60;        // snap forte quando dentro do cone
 
     let best = null, bestScore = Infinity;
     for (const e of enemies) {
@@ -175,27 +168,26 @@ export default class Player {
       while (diff >  Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       if (Math.abs(diff) > CONE) continue;
-      const score = dist + Math.abs(diff) * 180;
+      // Prioriza mais próximo e mais alinhado
+      const score = dist * 0.5 + Math.abs(diff) * 120;
       if (score < bestScore) { bestScore = score; best = { dx, dy, dist, ex: e.x, ey: e.y }; }
     }
 
     this._aimAssistGfx.clear();
     if (!best) return;
 
-    // Puxa suavemente em direção ao inimigo
+    // Snap forte para o centro do inimigo
     const tx = best.dx / best.dist, ty = best.dy / best.dist;
     const nx = this.lastDir.x + (tx - this.lastDir.x) * PULL;
     const ny = this.lastDir.y + (ty - this.lastDir.y) * PULL;
     const mag = Math.hypot(nx, ny);
     this.lastDir.set(nx / mag, ny / mag);
 
-    // Indicador pequeno acima do inimigo
+    // Triângulo indicador pequeno acima do inimigo travado
     const g = this._aimAssistGfx;
-    const ix = best.ex, iy = best.ey - 38;
-    g.fillStyle(0xff4400, 0.85);
-    g.fillTriangle(ix, iy, ix - 6, iy - 10, ix + 6, iy - 10);
-    g.lineStyle(1, 0xffffff, 0.5);
-    g.strokeTriangle(ix, iy, ix - 6, iy - 10, ix + 6, iy - 10);
+    const ix = best.ex, iy = best.ey - 40;
+    g.fillStyle(0xff4400, 0.9);
+    g.fillTriangle(ix, iy, ix - 5, iy - 9, ix + 5, iy - 9);
   }
 
   _drawGun() {

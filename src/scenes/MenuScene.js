@@ -209,7 +209,7 @@ export default class MenuScene extends Phaser.Scene {
 
   // ── CONTROLES ─────────────────────────────────────────────
   _buildControls() {
-    const totalW = 560;
+    const totalW = 680;
     const rowH   = 36;
     const barH   = rowH * 2 + 16;
     const barY   = H - barH / 2 - 8;
@@ -220,21 +220,24 @@ export default class MenuScene extends Phaser.Scene {
     bg.lineStyle(1, 0x330000, 0.6);
     bg.strokeRoundedRect(W/2 - totalW/2, barY - barH/2, totalW, barH, 5);
 
-    // Linha divisória entre as duas linhas
     const midY = barY;
     bg.lineStyle(1, 0x330000, 0.4);
     bg.lineBetween(W/2 - totalW/2 + 12, midY, W/2 + totalW/2 - 12, midY);
 
+    // 5 colunas — teclado e controle alinhados pela ação
     const kbItems = [
       ['WASD',  'mover'],
-      ['MOUSE', 'mirar/atirar'],
+      ['MOUSE', 'mirar'],
+      ['CLICK', 'atirar'],
       ['R',     'recarregar'],
       ['ESC',   'pausar'],
     ];
+    // A (Xbox) = X/Cruz no PS5  |  X (Xbox) = Quadrado no PS5
     const gpItems = [
       ['L.STICK', 'mover'],
       ['R.STICK', 'mirar'],
-      ['RT / A',  'atirar'],
+      ['RT / A',  'atirar'],     // A = Cruz (PS5)
+      ['X / LB',  'recarreg.'], // X = Quad (PS5)
       ['START',   'pausar'],
     ];
 

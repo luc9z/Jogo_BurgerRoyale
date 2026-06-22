@@ -52,7 +52,20 @@ export default class UpgradeScene extends Phaser.Scene {
     this._gpCards    = [];
     this._gpIdx      = 0;
     this._gpPrevs    = { left: false, right: false, a: false, b: false };
+    this._gpEnabled  = false;
     this._selectorT  = 0;
+    // Delay 400ms antes de aceitar input do controle —
+    // evita botão A pressionado (atirar) se propagar pro upgrade
+    this.time.delayedCall(400, () => {
+      const p = this.input.gamepad?.getPad(0);
+      this._gpPrevs = {
+        left:  !!(p?.buttons[14]?.pressed),
+        right: !!(p?.buttons[15]?.pressed),
+        a:     !!(p?.buttons[0]?.pressed),
+        b:     !!(p?.buttons[1]?.pressed),
+      };
+      this._gpEnabled = true;
+    });
     this._selector   = this.add.graphics().setDepth(DEPTH.OVERLAY + 5);
     this._buildCards();
     this._buildSkip();
@@ -304,7 +317,7 @@ export default class UpgradeScene extends Phaser.Scene {
   }
 
   update(_, delta) {
-    if (this._chosen) return;
+    if (this._chosen || !this._gpEnabled) return;
     const pad = this.input.gamepad?.getPad(0);
     if (!pad || this._gpCards.length === 0) return;
 

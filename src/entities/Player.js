@@ -158,7 +158,7 @@ export default class Player {
 
     let best = null, bestScore = Infinity;
     for (const e of enemies) {
-      if (e.isDead) continue;
+      if (e.isDead || !e.sprite?.active) continue;
       const dx = e.x - px, dy = e.y - py;
       const dist = Math.hypot(dx, dy);
       if (dist > RADIUS || dist < 5) continue;

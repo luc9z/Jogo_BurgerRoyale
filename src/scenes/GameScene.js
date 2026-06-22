@@ -146,7 +146,7 @@ export default class GameScene extends Phaser.Scene {
 
   // ── UPDATE ───────────────────────────────────────────────
   update(_t, delta) {
-    if (this.isGameOver) return;
+    if (this.isGameOver) { this._updateGoGamepad(); return; }
 
     const _pad       = this.input.gamepad?.getPad(0);
     const _gpStart   = !!(_pad?.buttons[9]?.pressed);
@@ -392,16 +392,30 @@ export default class GameScene extends Phaser.Scene {
         btn.on('pointerdown', onClick);
       };
 
-      mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, () => {
+      const _goRestart = () => {
         if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
         if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
         this.scene.start('GameScene');
-      });
-      mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555, () => {
+      };
+      const _goMenu = () => {
         this.scene.stop('UpgradeScene');
         this.scene.stop('PauseScene');
         this.scene.start('MenuScene');
-      });
+      };
+
+      mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, _goRestart);
+      mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555,        _goMenu);
+
+      // Gamepad navigation
+      this._goGpIdx     = 0;
+      this._goGpActions = [_goRestart, _goMenu];
+      this._goBtnYs     = [H/2 + 86, H/2 + 140];
+      this._goBtnCols   = [COLOR.WALL_GLOW, 0x555555];
+      this._goGpPrevs   = { up: false, down: false, a: false };
+      this._goGpEnabled = false;
+      this._goSelector  = this.add.graphics().setDepth(D + 3);
+      this.time.delayedCall(300, () => { this._goGpEnabled = true; });
+      this._drawGoSelector();
     });
   }
 
@@ -510,18 +524,69 @@ export default class GameScene extends Phaser.Scene {
         btn.on('pointerdown', onClick);
       };
 
-      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, () => {
+      const _vRestart = () => {
         if (this._victoryMusic) this._victoryMusic.stop();
         if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
         if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
         this.scene.start('GameScene', { startLevel: 1 });
-      });
-      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555, () => {
+      };
+      const _vMenu = () => {
         if (this._victoryMusic) this._victoryMusic.stop();
         this.scene.stop('UpgradeScene');
         this.scene.stop('PauseScene');
         this.scene.start('MenuScene');
-      });
+      };
+
+      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, _vRestart);
+      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555,          _vMenu);
+
+      // Gamepad navigation
+      this._goGpIdx     = 0;
+      this._goGpActions = [_vRestart, _vMenu];
+      this._goBtnYs     = [H/2 + 90, H/2 + 144];
+      this._goBtnCols   = [COLOR.GOLD_LIGHT, 0x555555];
+      this._goGpPrevs   = { up: false, down: false, a: false };
+      this._goGpEnabled = false;
+      this._goSelector  = this.add.graphics().setDepth(D + 3);
+      this.time.delayedCall(300, () => { this._goGpEnabled = true; });
+      this._drawGoSelector();
     });
+  }
+
+  // ── GAMEPAD NAV: telas de game over / vitória ────────────
+  _drawGoSelector() {
+    if (!this._goSelector || !this._goBtnYs) return;
+    const { WIDTH: W } = GAME;
+    const y   = this._goBtnYs[this._goGpIdx];
+    const col = this._goBtnCols[this._goGpIdx];
+    const bw = 280, bh = 40, pad = 6;
+    this._goSelector.clear();
+    this._goSelector.lineStyle(3, col, 1);
+    this._goSelector.strokeRect(W/2 - bw/2 - pad, y - bh/2 - pad, bw + pad*2, bh + pad*2);
+    const lx = W/2 - bw/2 - pad, ty = y - bh/2 - pad;
+    const rx = lx + bw + pad*2,  by = ty + bh + pad*2, cs = 10;
+    this._goSelector.lineStyle(2, 0xffffff, 0.75);
+    [[lx,ty,1,1],[rx,ty,-1,1],[lx,by,1,-1],[rx,by,-1,-1]].forEach(([ox,oy,sx,sy]) => {
+      this._goSelector.lineBetween(ox, oy, ox + sx*cs, oy);
+      this._goSelector.lineBetween(ox, oy, ox, oy + sy*cs);
+    });
+  }
+
+  _updateGoGamepad() {
+    if (!this._goGpEnabled || !this._goGpActions) return;
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const ly  = pad.leftStick?.y ?? 0;
+    const now = {
+      up:   !!(pad.buttons[12]?.pressed) || ly < -0.5,
+      down: !!(pad.buttons[13]?.pressed) || ly >  0.5,
+      a:    !!(pad.buttons[0]?.pressed),
+    };
+    const prev = this._goGpPrevs;
+    const n    = this._goGpActions.length;
+    if (now.up   && !prev.up)   { this._goGpIdx = (this._goGpIdx - 1 + n) % n; this._drawGoSelector(); }
+    if (now.down && !prev.down) { this._goGpIdx = (this._goGpIdx + 1) % n;     this._drawGoSelector(); }
+    if (now.a    && !prev.a)    { this._goGpActions[this._goGpIdx](); }
+    this._goGpPrevs = now;
   }
 }

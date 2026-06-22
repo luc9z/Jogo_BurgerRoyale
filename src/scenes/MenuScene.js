@@ -20,6 +20,9 @@ export default class MenuScene extends Phaser.Scene {
     this._buildCharacters();
     this._buildTitle();
     this._buildBestScore();
+    this._gpIdx      = 0;   // 0 = JOGAR, 1 = FASES
+    this._gpPrevs    = { up: false, down: false, a: false, start: false };
+    this._menuBtns   = [];  // preenchido por _buildPlayButton
     this._buildPlayButton();
     this._buildControls();
     this._buildBloodDrips();
@@ -158,16 +161,36 @@ export default class MenuScene extends Phaser.Scene {
 
   // ── BOTÕES ────────────────────────────────────────────────
   _buildPlayButton() {
-    this._mkButton(W/2, 244, 300, 50, 'JOGAR', COLOR.WALL, COLOR.WALL_GLOW, 0xbb1800,
+    const b0 = this._mkButton(W/2, 244, 300, 50, 'JOGAR', COLOR.WALL, COLOR.WALL_GLOW, 0xbb1800,
       FONT.VALUE, () => this._startGame());
-
-    this._mkButton(W/2, 300, 220, 36, 'FASES', 0x12001a, COLOR.GOLD, 0x22002e,
+    const b1 = this._mkButton(W/2, 300, 220, 36, 'FASES', 0x12001a, COLOR.GOLD, 0x22002e,
       FONT.BODY, () => this.scene.start('LevelSelectScene'));
 
-    const hint = this.add.text(W/2, 332, 'ou pressione ESPACO', txt(FONT.BODY, '#ffffff33'))
+    this._menuBtns = [
+      { btn: b0.btn, lbl: b0.lbl, fill: COLOR.WALL,  hover: 0xbb1800, stroke: COLOR.WALL_GLOW, action: () => this._startGame() },
+      { btn: b1.btn, lbl: b1.lbl, fill: 0x12001a,    hover: 0x22002e, stroke: COLOR.GOLD,      action: () => this.scene.start('LevelSelectScene') },
+    ];
+
+    // Cursor de seleção (gamepad)
+    this._gpCursor = this.add.graphics().setDepth(5);
+    this._drawGpCursor();
+
+    const hint = this.add.text(W/2, 332, 'ou pressione ESPACO / A', txt(FONT.BODY, '#ffffff33'))
       .setOrigin(0.5).setDepth(3);
-    this.tweens.add({
-      targets: hint, alpha: 0.06, duration: 750, yoyo: true, repeat: -1,
+    this.tweens.add({ targets: hint, alpha: 0.06, duration: 750, yoyo: true, repeat: -1 });
+  }
+
+  _drawGpCursor() {
+    if (!this._gpCursor || this._menuBtns.length === 0) return;
+    const b   = this._menuBtns[this._gpIdx].btn;
+    const x   = b.x, y = b.y, hw = b.width / 2 + 6, hh = b.height / 2 + 6;
+    this._gpCursor.clear();
+    this._gpCursor.lineStyle(2, 0xffffff, 0.9);
+    [[x-hw,y-hh,1,0],[x+hw,y-hh,-1,0],[x-hw,y+hh,1,0],[x+hw,y+hh,-1,0]].forEach(([ox,oy,sx]) => {
+      this._gpCursor.lineBetween(ox, oy, ox + sx*10, oy);
+    });
+    [[x-hw,y-hh,0,1],[x+hw,y-hh,0,1],[x-hw,y+hh,0,-1],[x+hw,y+hh,0,-1]].forEach(([ox,oy,_,sy]) => {
+      this._gpCursor.lineBetween(ox, oy, ox, oy + sy*10);
     });
   }
 
@@ -181,31 +204,62 @@ export default class MenuScene extends Phaser.Scene {
     btn.on('pointerout',  () => { btn.setFillStyle(fill);
       this.tweens.add({ targets: [btn, lbl], scaleX: 1, scaleY: 1, duration: 70 }); });
     btn.on('pointerdown', onClick);
-    return btn;
+    return { btn, lbl };
   }
 
   // ── CONTROLES ─────────────────────────────────────────────
   _buildControls() {
-    const by    = H - 36;
-    const items = [
+    const totalW = 560;
+    const rowH   = 36;
+    const barH   = rowH * 2 + 16;
+    const barY   = H - barH / 2 - 8;
+
+    const bg = this.add.graphics().setDepth(3);
+    bg.fillStyle(0x000000, 0.5);
+    bg.fillRoundedRect(W/2 - totalW/2, barY - barH/2, totalW, barH, 5);
+    bg.lineStyle(1, 0x330000, 0.6);
+    bg.strokeRoundedRect(W/2 - totalW/2, barY - barH/2, totalW, barH, 5);
+
+    // Linha divisória entre as duas linhas
+    const midY = barY;
+    bg.lineStyle(1, 0x330000, 0.4);
+    bg.lineBetween(W/2 - totalW/2 + 12, midY, W/2 + totalW/2 - 12, midY);
+
+    const kbItems = [
       ['WASD',  'mover'],
-      ['MOUSE', 'atirar'],
+      ['MOUSE', 'mirar/atirar'],
       ['R',     'recarregar'],
       ['ESC',   'pausar'],
     ];
-    const totalW = 480, itemW = totalW / items.length;
+    const gpItems = [
+      ['L.STICK', 'mover'],
+      ['R.STICK', 'mirar'],
+      ['RT / A',  'atirar'],
+      ['START',   'pausar'],
+    ];
 
-    const bg = this.add.graphics().setDepth(3);
-    bg.fillStyle(0x000000, 0.45);
-    bg.fillRoundedRect(W/2 - totalW/2, by - 22, totalW, 44, 4);
-    bg.lineStyle(1, 0x330000, 0.7);
-    bg.strokeRoundedRect(W/2 - totalW/2, by - 22, totalW, 44, 4);
+    const itemW = totalW / kbItems.length;
+    const ky = barY - rowH/2 + 6;
+    const gy = barY + rowH/2 - 6;
 
-    items.forEach(([key, action], i) => {
+    kbItems.forEach(([key, action], i) => {
       const ix = W/2 - totalW/2 + itemW * i + itemW/2;
-      this.add.text(ix, by - 8, key,    txt(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(4);
-      this.add.text(ix, by + 8, action, txt(FONT.BODY, '#aaaaaa')).setOrigin(0.5).setDepth(4);
+      this.add.text(ix, ky - 8, key,    txt(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(4);
+      this.add.text(ix, ky + 8, action, txt(FONT.BODY, '#888888')).setOrigin(0.5).setDepth(4);
     });
+
+    gpItems.forEach(([key, action], i) => {
+      const ix = W/2 - totalW/2 + itemW * i + itemW/2;
+      this.add.text(ix, gy - 8, key,    txt(FONT.BODY, '#88ffcc')).setOrigin(0.5).setDepth(4);
+      this.add.text(ix, gy + 8, action, txt(FONT.BODY, '#555555')).setOrigin(0.5).setDepth(4);
+    });
+
+    // Ícone de gamepad à esquerda
+    const gi = this.add.graphics().setDepth(4).setAlpha(0.5);
+    gi.fillStyle(0x88ffcc, 1);
+    gi.fillRoundedRect(W/2 - totalW/2 - 22, gy - 6, 14, 12, 3);
+    gi.fillCircle(W/2 - totalW/2 - 18, gy + 2, 2);
+    gi.fillCircle(W/2 - totalW/2 - 11, gy - 1, 2);
   }
 
   // ── PINGOS DE SANGUE ──────────────────────────────────────
@@ -230,6 +284,30 @@ export default class MenuScene extends Phaser.Scene {
     d.g.fillCircle(d.x, d.y + d.len, 4.5);
   }
 
+  // ── NAVEGAÇÃO CONTROLE ────────────────────────────────────
+  _updateGamepad() {
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+
+    const now = {
+      up:    pad.buttons[12]?.pressed || pad.leftStick.y < -0.5,
+      down:  pad.buttons[13]?.pressed || pad.leftStick.y >  0.5,
+      a:     pad.buttons[0]?.pressed,
+      start: pad.buttons[9]?.pressed,
+    };
+    const prev = this._gpPrevs;
+
+    if ((now.up || now.down) && !(prev.up || prev.down)) {
+      this._gpIdx = 1 - this._gpIdx;
+      this._drawGpCursor();
+    }
+    if ((now.a || now.start) && !(prev.a || prev.start)) {
+      this._menuBtns[this._gpIdx].action();
+    }
+
+    this._gpPrevs = now;
+  }
+
   // ── TRANSIÇÃO ─────────────────────────────────────────────
   _startGame() {
     this.cameras.main.fade(350, 0, 0, 0, false, (_, t) => {
@@ -239,6 +317,7 @@ export default class MenuScene extends Phaser.Scene {
 
   // ── UPDATE ────────────────────────────────────────────────
   update(_, delta) {
+    this._updateGamepad();
     const dt = delta / 1000;
     for (const d of this._drips) {
       d.y += d.speed * dt;

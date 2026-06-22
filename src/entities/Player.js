@@ -60,8 +60,9 @@ export default class Player {
     this.sprite.body.setAllowGravity(false);
     this.sprite.play(`${SKIN}-idle`);
 
-    this.bullets  = s.physics.add.group({ allowGravity: false });
-    this._gunGfx  = s.add.graphics().setDepth(DEPTH.ENTITY + 1);
+    this.bullets       = s.physics.add.group({ allowGravity: false });
+    this._gunGfx       = s.add.graphics().setDepth(DEPTH.ENTITY + 1);
+    this._aimAssistGfx = s.add.graphics().setDepth(DEPTH.ENTITY + 2);
 
     s.events.emit('hearts-changed', this.hearts);
     s.events.emit('ammo-changed',   this.ammo);
@@ -126,10 +127,6 @@ export default class Player {
       const d = Math.hypot(rs.x, rs.y);
       this.lastDir.set(rs.x / d, rs.y / d);
       if (!this._attackLock) this.sprite.setFlipX(rs.x < 0);
-      this._crosshair.setPosition(
-        this.sprite.x + this.lastDir.x * 150,
-        this.sprite.y + this.lastDir.y * 150,
-      );
     } else {
       const ptr = this.scene.input.activePointer;
       const mx  = ptr.x;
@@ -143,6 +140,62 @@ export default class Player {
         if (!this._attackLock) this.sprite.setFlipX(dx < 0);
       }
     }
+
+    // Aim assist — só com controle conectado
+    if (pad) {
+      this._applyAimAssist();
+    } else {
+      this._aimAssistGfx.clear();
+    }
+
+    if (useGamepad || pad) {
+      this._crosshair.setPosition(
+        this.sprite.x + this.lastDir.x * 150,
+        this.sprite.y + this.lastDir.y * 150,
+      );
+    }
+  }
+
+  _applyAimAssist() {
+    const enemies = this.scene.enemies?.enemies ?? [];
+    const px = this.sprite.x, py = this.sprite.y;
+    const RADIUS = 200;
+    const CONE   = Math.PI / 3.5; // ±51°
+    const PULL   = 0.28;
+
+    let best = null, bestScore = Infinity;
+    for (const e of enemies) {
+      if (e.isDead) continue;
+      const dx = e.x - px, dy = e.y - py;
+      const dist = Math.hypot(dx, dy);
+      if (dist > RADIUS || dist < 5) continue;
+      const angle    = Math.atan2(dy, dx);
+      const aimAngle = Math.atan2(this.lastDir.y, this.lastDir.x);
+      let diff = angle - aimAngle;
+      while (diff >  Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) > CONE) continue;
+      const score = dist + Math.abs(diff) * 180;
+      if (score < bestScore) { bestScore = score; best = { dx, dy, dist, ex: e.x, ey: e.y }; }
+    }
+
+    this._aimAssistGfx.clear();
+    if (!best) return;
+
+    // Puxa suavemente em direção ao inimigo
+    const tx = best.dx / best.dist, ty = best.dy / best.dist;
+    const nx = this.lastDir.x + (tx - this.lastDir.x) * PULL;
+    const ny = this.lastDir.y + (ty - this.lastDir.y) * PULL;
+    const mag = Math.hypot(nx, ny);
+    this.lastDir.set(nx / mag, ny / mag);
+
+    // Indicador pequeno acima do inimigo
+    const g = this._aimAssistGfx;
+    const ix = best.ex, iy = best.ey - 38;
+    g.fillStyle(0xff4400, 0.85);
+    g.fillTriangle(ix, iy, ix - 6, iy - 10, ix + 6, iy - 10);
+    g.lineStyle(1, 0xffffff, 0.5);
+    g.strokeTriangle(ix, iy, ix - 6, iy - 10, ix + 6, iy - 10);
   }
 
   _drawGun() {

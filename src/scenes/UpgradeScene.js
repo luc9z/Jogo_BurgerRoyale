@@ -49,8 +49,14 @@ export default class UpgradeScene extends Phaser.Scene {
     this.input.setDefaultCursor('default');
     this._buildBg();
     this._buildHeader();
+    this._gpCards    = [];
+    this._gpIdx      = 0;
+    this._gpPrevs    = { left: false, right: false, a: false, b: false };
+    this._selectorT  = 0;
+    this._selector   = this.add.graphics().setDepth(DEPTH.OVERLAY + 5);
     this._buildCards();
     this._buildSkip();
+    this._drawSelector();
   }
 
   _buildBg() {
@@ -204,6 +210,8 @@ export default class UpgradeScene extends Phaser.Scene {
       bg.on('pointerdown', () => {
         if (!this._chosen) { this._chosen = true; this._choose(opt); }
       });
+
+      this._gpCards.push({ bg, opt, cx, cy, cw, ch, fillCol, bordCol });
     }
   }
 
@@ -276,6 +284,48 @@ export default class UpgradeScene extends Phaser.Scene {
     skip.on('pointerdown', () => {
       if (!this._chosen) { this._chosen = true; this._choose(null); }
     });
+  }
+
+  _drawSelector() {
+    this._selector.clear();
+    if (this._gpCards.length === 0) return;
+    const c = this._gpCards[this._gpIdx];
+    this._selector.lineStyle(3, c.opt.color, 1);
+    this._selector.strokeRect(c.cx - c.cw / 2 - 5, c.cy - c.ch / 2 - 5, c.cw + 10, c.ch + 10);
+    // Pequenos cantos decorativos
+    const lx = c.cx - c.cw / 2 - 5, ty = c.cy - c.ch / 2 - 5;
+    const rx = lx + c.cw + 10,       by = ty + c.ch + 10;
+    const cs = 10;
+    this._selector.lineStyle(4, 0xffffff, 0.8);
+    [[lx,ty,1,1],[rx,ty,-1,1],[lx,by,1,-1],[rx,by,-1,-1]].forEach(([ox,oy,sx,sy]) => {
+      this._selector.lineBetween(ox, oy, ox + sx*cs, oy);
+      this._selector.lineBetween(ox, oy, ox, oy + sy*cs);
+    });
+  }
+
+  update(_, delta) {
+    if (this._chosen) return;
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad || this._gpCards.length === 0) return;
+
+    const now = {
+      left:  pad.buttons[14]?.pressed || pad.leftStick.x < -0.5,
+      right: pad.buttons[15]?.pressed || pad.leftStick.x >  0.5,
+      a:     pad.buttons[0]?.pressed,
+      b:     pad.buttons[1]?.pressed,
+    };
+    const prev = this._gpPrevs;
+
+    if (now.left  && !prev.left)  { this._gpIdx = (this._gpIdx - 1 + this._gpCards.length) % this._gpCards.length; this._drawSelector(); }
+    if (now.right && !prev.right) { this._gpIdx = (this._gpIdx + 1) % this._gpCards.length; this._drawSelector(); }
+    if (now.a     && !prev.a)     { this._chosen = true; this._choose(this._gpCards[this._gpIdx].opt); }
+    if (now.b     && !prev.b)     { this._chosen = true; this._choose(null); }
+
+    this._gpPrevs = now;
+
+    // Pulsa o seletor
+    this._selectorT += delta;
+    this._selector.setAlpha(0.65 + 0.35 * Math.sin(this._selectorT * 0.005));
   }
 
   _choose(upgrade) {

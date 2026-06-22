@@ -34,8 +34,9 @@ export default class Player {
     this.isMoving     = false;
     this.hearts       = PLAYER.MAX_HEARTS;
     this.lastDir      = new Phaser.Math.Vector2(1, 0);
-    this._attackLock  = false;
-    this._mouseDown   = false;
+    this._attackLock    = false;
+    this._mouseDown     = false;
+    this._gpReloadPrev  = false;
 
     this._create();
     this._buildControls();
@@ -114,18 +115,33 @@ export default class Player {
     this._drawGun();
   }
 
-  // Mira e crosshair seguem o mouse (ptr.x = coord do jogo)
+  // Mira e crosshair: analógico direito do controle ou mouse
   _updateAim() {
-    const ptr = this.scene.input.activePointer;
-    const mx  = ptr.x;
-    const my  = ptr.y;
-    this._crosshair.setPosition(mx, my);
-    const dx   = mx - this.sprite.x;
-    const dy   = my - this.sprite.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > 10) {
-      this.lastDir.set(dx / dist, dy / dist);
-      if (!this._attackLock) this.sprite.setFlipX(dx < 0);
+    const pad  = this.scene.input.gamepad?.getPad(0);
+    const rs   = pad?.rightStick;
+    const DEAD = 0.15;
+    const useGamepad = rs && (Math.abs(rs.x) > DEAD || Math.abs(rs.y) > DEAD);
+
+    if (useGamepad) {
+      const d = Math.hypot(rs.x, rs.y);
+      this.lastDir.set(rs.x / d, rs.y / d);
+      if (!this._attackLock) this.sprite.setFlipX(rs.x < 0);
+      this._crosshair.setPosition(
+        this.sprite.x + this.lastDir.x * 150,
+        this.sprite.y + this.lastDir.y * 150,
+      );
+    } else {
+      const ptr = this.scene.input.activePointer;
+      const mx  = ptr.x;
+      const my  = ptr.y;
+      this._crosshair.setPosition(mx, my);
+      const dx = mx - this.sprite.x;
+      const dy = my - this.sprite.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 10) {
+        this.lastDir.set(dx / dist, dy / dist);
+        if (!this._attackLock) this.sprite.setFlipX(dx < 0);
+      }
     }
   }
 
@@ -266,6 +282,19 @@ export default class Player {
     if (cursors.up.isDown    || keys.W.isDown) vy = -speed;
     if (cursors.down.isDown  || keys.S.isDown) vy =  speed;
 
+    // Analógico esquerdo + D-pad do controle
+    const pad = this.scene.input.gamepad?.getPad(0);
+    if (pad) {
+      const DEAD = 0.15;
+      const lx = pad.leftStick.x, ly = pad.leftStick.y;
+      if (Math.abs(lx) > DEAD) vx = lx * speed;
+      if (Math.abs(ly) > DEAD) vy = ly * speed;
+      if (pad.buttons[14]?.pressed) vx = -speed;
+      if (pad.buttons[15]?.pressed) vx =  speed;
+      if (pad.buttons[12]?.pressed) vy = -speed;
+      if (pad.buttons[13]?.pressed) vy =  speed;
+    }
+
     if (vx !== 0 && vy !== 0) { vx *= 0.7071; vy *= 0.7071; }
 
     sprite.setVelocity(vx, vy);
@@ -279,7 +308,9 @@ export default class Player {
 
   // ── DISPARO ──────────────────────────────────────────────
   _handleShoot() {
-    if (!this._mouseDown) return;
+    const pad    = this.scene.input.gamepad?.getPad(0);
+    const gpFire = pad && (pad.buttons[7]?.pressed || pad.buttons[0]?.pressed);
+    if (!this._mouseDown && !gpFire) return;
     if (!this.canShoot || this.isReloading || this.isDead) return;
 
     if (this.ammo <= 0) { this._startReload(); return; }
@@ -383,7 +414,11 @@ export default class Player {
   // ── RECARGA ───────────────────────────────────────────────
   _handleReloadKey() {
     if (this.weaponDef.isMelee) return;
-    if (Phaser.Input.Keyboard.JustDown(this.keys.R) &&
+    const pad    = this.scene.input.gamepad?.getPad(0);
+    const gpNow  = !!(pad && (pad.buttons[2]?.pressed || pad.buttons[4]?.pressed));
+    const gpJust = gpNow && !this._gpReloadPrev;
+    this._gpReloadPrev = gpNow;
+    if ((Phaser.Input.Keyboard.JustDown(this.keys.R) || gpJust) &&
         !this.isReloading && this.ammo < this.weaponDef.clipSize) {
       this._startReload();
     }

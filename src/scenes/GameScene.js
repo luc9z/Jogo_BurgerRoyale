@@ -76,6 +76,7 @@ export default class GameScene extends Phaser.Scene {
     this._paused          = false;
     this._pendingNextRound = false;
     this._pickups         = [];
+    this._gpStartPrev     = false;
 
     this._makeBulletTexture();
     this._smoothTextures();
@@ -147,7 +148,12 @@ export default class GameScene extends Phaser.Scene {
   update(_t, delta) {
     if (this.isGameOver) return;
 
-    if (Phaser.Input.Keyboard.JustDown(this._escKey) && !this._paused) {
+    const _pad       = this.input.gamepad?.getPad(0);
+    const _gpStart   = !!(_pad?.buttons[9]?.pressed);
+    const _gpPause   = _gpStart && !this._gpStartPrev;
+    this._gpStartPrev = _gpStart;
+
+    if ((Phaser.Input.Keyboard.JustDown(this._escKey) || _gpPause) && !this._paused) {
       this._paused = true;
       this.scene.pause();
       this.scene.launch('PauseScene', {

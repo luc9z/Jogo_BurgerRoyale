@@ -210,11 +210,15 @@ export default class UpgradeScene extends Phaser.Scene {
     }
 
     if (canAfford) {
+      const idx = this._gpCards.length; // índice que esta carta terá
       bg.setInteractive({ useHandCursor: true });
       bg.on('pointerover', () => {
         bg.setFillStyle(0x220038);
         bg.setStrokeStyle(2, opt.color);
         this.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.04, duration: 70 });
+        // Mouse move o selected box para a carta sob o cursor
+        this._gpIdx = idx;
+        this._drawSelector();
       });
       bg.on('pointerout', () => {
         bg.setFillStyle(fillCol);

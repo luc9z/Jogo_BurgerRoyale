@@ -74,6 +74,7 @@ export default class UpgradeScene extends Phaser.Scene {
     });
     this._selector   = this.add.graphics().setDepth(DEPTH.OVERLAY + 5);
     this._buildCards();
+    this._buildMysteryBox();
     this._buildSkip();
     this._drawSelector();
   }
@@ -365,7 +366,12 @@ export default class UpgradeScene extends Phaser.Scene {
 
     if (now.left  && !prev.left)  { this._gpIdx = (this._gpIdx - 1 + this._gpCards.length) % this._gpCards.length; this._drawSelector(); }
     if (now.right && !prev.right) { this._gpIdx = (this._gpIdx + 1) % this._gpCards.length; this._drawSelector(); }
-    if (now.a     && !prev.a)     { this._chosen = true; this._choose(this._gpCards[this._gpIdx].opt); }
+    if (now.a     && !prev.a)     {
+      const c = this._gpCards[this._gpIdx];
+      this._chosen = true;
+      if (c.opt.key === '__box__') this._openBox();
+      else this._choose(c.opt);
+    }
     if (now.b     && !prev.b)     { this._chosen = true; this._choose(null); }
 
     this._gpPrevs = now;
@@ -373,6 +379,116 @@ export default class UpgradeScene extends Phaser.Scene {
     // Pulsa o seletor
     this._selectorT += delta;
     this._selector.setAlpha(0.65 + 0.35 * Math.sin(this._selectorT * 0.005));
+  }
+
+  // ── CAIXA MISTERIOSA (estilo CS:GO) ──────────────────────
+  _buildMysteryBox() {
+    const { score = 0, currentWeapon = 'pistol' } = this._data;
+    // Só oferece se houver saldo razoável e ainda houver arma a evoluir
+    const curTier = WEAPONS[currentWeapon]?.tier ?? 0;
+    const canRoll = WEAPON_POOL.some(w => w.tier > curTier);
+    if (score < 1000 || !canRoll) return;
+
+    const cy = H - 74, cw = 440, ch = 40, cx = W / 2;
+    const D = DEPTH.OVERLAY + 2;
+    const bg = this.add.rectangle(cx, cy, cw, ch, 0x06121e)
+      .setStrokeStyle(2, 0x00ccff).setDepth(D + 1)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(cx, cy - 7, '🎁  CAIXA MISTERIOSA', ps(FONT.BODY, '#00ccff'))
+      .setOrigin(0.5).setDepth(D + 2);
+    this.add.text(cx, cy + 9, `arma aleatória — custa TODO o saldo (${score.toLocaleString('pt-BR')} pts)`,
+      ps(FONT.BODY, '#88ddff')).setOrigin(0.5).setDepth(D + 2);
+
+    bg.on('pointerover', () => { bg.setFillStyle(0x0a2030); this.tweens.add({ targets: bg, scaleX: 1.03, scaleY: 1.03, duration: 70 }); });
+    bg.on('pointerout',  () => { bg.setFillStyle(0x06121e); this.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 70 }); });
+    bg.on('pointerdown', () => { if (!this._chosen) { this._chosen = true; this._openBox(); } });
+
+    // Navegável pelo controle (entra na lista do seletor)
+    this._gpCards.push({ bg, opt: { key: '__box__', color: 0x00ccff }, cx, cy, cw, ch });
+  }
+
+  _pickBoxWinner() {
+    const curTier = WEAPONS[this._data?.currentWeapon ?? 'pistol']?.tier ?? 0;
+    let list = WEAPON_POOL.filter(w => w.tier > curTier);
+    if (!list.length) list = WEAPON_POOL.slice();
+    // Peso: tier menor é mais comum, laser é raro (emoção do "drop")
+    const weights = list.map(w => Math.max(2, 32 - w.tier * 4));
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < list.length; i++) { r -= weights[i]; if (r <= 0) return list[i]; }
+    return list[list.length - 1];
+  }
+
+  _openBox() {
+    const winner = this._pickBoxWinner();
+    const D = DEPTH.OVERLAY + 20;
+
+    // Overlay escuro
+    const ov = this.add.rectangle(W / 2, H / 2, W, H, 0x02060c, 0.9).setDepth(D);
+    this.add.text(W / 2, 70, 'ABRINDO CAIXA MISTERIOSA', ps(FONT.TITLE, '#00ccff'))
+      .setOrigin(0.5).setDepth(D + 3);
+
+    // Reel horizontal de armas
+    const CARD_W = 96, WIN = 38, COUNT = WIN + 6;
+    const reelY  = H / 2;
+    const reel   = this.add.container(0, reelY).setDepth(D + 1);
+
+    for (let i = 0; i < COUNT; i++) {
+      const def = (i === WIN) ? winner : Phaser.Utils.Array.GetRandom(WEAPON_POOL);
+      const x = i * CARD_W;
+      const card = this.add.rectangle(x, 0, CARD_W - 10, 110, 0x0c0016).setStrokeStyle(2, def.color);
+      const icon = this.add.image(x, -10, `wicon-${def.key}`).setDisplaySize(54, 54).setTint(def.color);
+      const name = this.add.text(x, 38, def.label, ps(FONT.BODY, '#cccccc')).setOrigin(0.5);
+      reel.add([card, icon, name]);
+    }
+
+    // Marcador central (ponteiro)
+    const mark = this.add.graphics().setDepth(D + 2);
+    mark.fillStyle(0xffd740, 1);
+    mark.fillTriangle(W / 2 - 10, reelY - 70, W / 2 + 10, reelY - 70, W / 2, reelY - 56);
+    mark.fillTriangle(W / 2 - 10, reelY + 70, W / 2 + 10, reelY + 70, W / 2, reelY + 56);
+    mark.lineStyle(2, 0xffd740, 0.5);
+    mark.lineBetween(W / 2, reelY - 60, W / 2, reelY + 60);
+
+    // Posições: card WIN deve parar sob o centro
+    const startX = W / 2 - CARD_W / 2;                 // card 0 centralizado
+    const finalX = W / 2 - (WIN * CARD_W + CARD_W / 2); // card WIN centralizado
+    reel.x = startX;
+
+    // Ticks que desaceleram (sensação de roleta)
+    let tickT = 60;
+    const tick = () => {
+      if (tickT > 420 || this._chosen === 'done') return;
+      uiBlip(this, false);
+      tickT *= 1.12;
+      this.time.delayedCall(tickT, tick);
+    };
+    tick();
+
+    this.tweens.add({
+      targets: reel, x: finalX, duration: 4200, ease: 'Quart.easeOut',
+      onComplete: () => {
+        this._chosen = 'done';
+        // Destaca o vencedor
+        const flash = this.add.rectangle(W / 2, reelY, CARD_W - 8, 116, winner.color, 0)
+          .setStrokeStyle(3, 0xffffff).setDepth(D + 2);
+        this.tweens.add({ targets: flash, alpha: 0.25, duration: 200, yoyo: true, repeat: 2 });
+        uiBlip(this, true);
+        this.add.text(W / 2, reelY + 96, `VOCÊ GANHOU:  ${winner.label}!`, ps(FONT.VALUE, '#ffd740'))
+          .setOrigin(0.5).setDepth(D + 3);
+
+        this.time.delayedCall(1500, () => this._resolveBox(winner));
+      },
+    });
+  }
+
+  _resolveBox(winner) {
+    const gs = this.scene.get('GameScene');
+    gs.player.changeWeapon(winner.key);
+    gs.score = 0;                          // custa TODO o saldo
+    gs.events.emit('score-changed', 0);
+    this.scene.stop();
+    this.scene.resume('GameScene');
   }
 
   _choose(upgrade) {

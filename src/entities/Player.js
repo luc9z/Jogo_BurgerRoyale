@@ -370,10 +370,6 @@ export default class Player {
       this._fireBullet(baseAngle + (Math.random() - 0.5) * w.spread);
     }
 
-    // Flash só em armas lentas — metralhadora (80ms cd) causaria spam de luz
-    if (w.shootCd >= 150) {
-      this.scene.cameras.main.flash(30, 255, 220, 80, false);
-    }
 
     this._attackLock = true;
     this.sprite.play(`${SKIN}-attack`, true);

@@ -234,22 +234,55 @@ export default class GameScene extends Phaser.Scene {
   // ── PICKUPS DE CURA ──────────────────────────────────────
   _setupPickups() {
     this._onDropHeal = (x, y) => {
-      const g = this.add.graphics().setDepth(DEPTH.FX);
-      g.fillStyle(0xff2244, 1);
-      g.fillRect(-7, -2, 14, 4);
-      g.fillRect(-2, -7, 4, 14);
-      g.lineStyle(1, 0xff8888, 0.6);
-      g.strokeRect(-7, -2, 14, 4);
+      // Halo de brilho atrás (pulsa em alpha)
+      const glow = this.add.graphics().setDepth(DEPTH.FX)
+        .setBlendMode(Phaser.BlendModes.SCREEN);
+      glow.fillStyle(0xff3355, 0.35);
+      glow.fillCircle(0, 0, 16);
+      glow.fillStyle(0xff6688, 0.25);
+      glow.fillCircle(0, 0, 10);
+      glow.setPosition(x, y);
+
+      // Coração
+      const g = this.add.graphics().setDepth(DEPTH.FX + 1);
+      // contorno escuro p/ destacar do fundo
+      g.fillStyle(0x6e0010, 1);
+      g.fillCircle(-4, -3.5, 6);
+      g.fillCircle(4, -3.5, 6);
+      g.fillTriangle(-9.5, -1, 9.5, -1, 0, 12);
+      // corpo vermelho
+      g.fillStyle(0xff2a48, 1);
+      g.fillCircle(-4, -3.5, 5);
+      g.fillCircle(4, -3.5, 5);
+      g.fillTriangle(-8.5, -1, 8.5, -1, 0, 10.5);
+      // brilho superior (specular)
+      g.fillStyle(0xff8fa3, 0.85);
+      g.fillCircle(-5, -5, 2.2);
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(-5.5, -5.5, 1);
       g.setPosition(x, y);
+
+      // Pulsa o coração e o halo
       this.tweens.add({
-        targets: g, scaleX: 1.3, scaleY: 1.3,
-        duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        targets: g, scaleX: 1.18, scaleY: 1.18,
+        duration: 550, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
-      const pickup = { g, x, y };
+      this.tweens.add({
+        targets: glow, scaleX: 1.35, scaleY: 1.35, alpha: 0.5,
+        duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+      // Flutua suavemente
+      this.tweens.add({
+        targets: [g, glow], y: y - 4,
+        duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+
+      const destroy = () => { g.destroy(); glow.destroy(); };
+      const pickup = { g, glow, x, y, destroy };
       this._pickups.push(pickup);
       this.time.delayedCall(9000, () => {
         const i = this._pickups.indexOf(pickup);
-        if (i >= 0) { this._pickups.splice(i, 1); g.destroy(); }
+        if (i >= 0) { this._pickups.splice(i, 1); destroy(); }
       });
     };
 
@@ -272,10 +305,29 @@ export default class GameScene extends Phaser.Scene {
       const p = this._pickups[i];
       if (Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y) < 32) {
         this.player.heal();
-        p.g.destroy();
+        // Faísca rápida ao coletar
+        this._healPickFX(p.x, p.y);
+        p.destroy();
         this._pickups.splice(i, 1);
       }
     }
+  }
+
+  // Faísca de corações ao coletar a cura
+  _healPickFX(x, y) {
+    const g = this.add.graphics().setDepth(DEPTH.FX + 2)
+      .setBlendMode(Phaser.BlendModes.SCREEN);
+    g.fillStyle(0xff5577, 0.9);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.fillCircle(Math.cos(a) * 6, Math.sin(a) * 6, 3);
+    }
+    g.setPosition(x, y);
+    this.tweens.add({
+      targets: g, scaleX: 2.4, scaleY: 2.4, alpha: 0,
+      duration: 360, ease: 'Quad.easeOut',
+      onComplete: () => g.destroy(),
+    });
   }
 
   // Filtro LINEAR nas texturas de arte (sprites/fundo) para escalarem suaves.

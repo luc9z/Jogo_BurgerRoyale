@@ -1,24 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="90" height="55" viewBox="0 0 90 55">
   <defs>
-    <linearGradient id="kgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
-    <linearGradient id="kskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2CDA4"/><stop offset="1" stop-color="#C8956C"/></linearGradient>
-    <linearGradient id="kcape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C42020"/><stop offset="1" stop-color="#6E0000"/></linearGradient>
-    <radialGradient id="kgem" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FF7A5A"/><stop offset="1" stop-color="#B81000"/></radialGradient>
+    <linearGradient id="dgold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#B8860B"/></linearGradient>
+    <linearGradient id="dskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2CDA4"/><stop offset="1" stop-color="#C8956C"/></linearGradient>
+    <linearGradient id="dcape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C42020"/><stop offset="1" stop-color="#6E0000"/></linearGradient>
+    <linearGradient id="dbeard" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B0743A"/><stop offset="1" stop-color="#5A3010"/></linearGradient>
+    <radialGradient id="dgem" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FF7A5A"/><stop offset="1" stop-color="#B81000"/></radialGradient>
   </defs>
-  <ellipse cx="45" cy="48" rx="42" ry="6" fill="#000" opacity="0.25"/>
-  <g stroke="#3A1E00" stroke-width="0.7" stroke-linejoin="round">
-    <rect x="5" y="22" width="80" height="21" rx="9" fill="url(#kgold)"/>
-    <rect x="5" y="22" width="80" height="21" rx="9" fill="url(#kcape)" opacity="0.35" stroke="none"/>
-    <ellipse cx="78" cy="32" rx="14" ry="12" fill="url(#kskin)"/>
-    <g transform="rotate(90,78,20)"><rect x="68" y="15" width="22" height="7" rx="2" fill="url(#kgold)"/></g>
-    <line x1="72" y1="27" x2="78" y2="33" stroke="#3A1E00" stroke-width="1.6"/>
-    <line x1="78" y1="27" x2="72" y2="33" stroke="#3A1E00" stroke-width="1.6"/>
-    <line x1="80" y1="28" x2="86" y2="34" stroke="#3A1E00" stroke-width="1.6"/>
-    <line x1="86" y1="28" x2="80" y2="34" stroke="#3A1E00" stroke-width="1.6"/>
-    <ellipse cx="79" cy="38" rx="4" ry="3" fill="url(#kgem)"/>
-    <rect x="20" y="5" width="7" height="20" rx="3.5" fill="url(#kskin)" transform="rotate(-10,23,15)"/>
-    <rect x="35" y="5" width="7" height="20" rx="3.5" fill="url(#kskin)" transform="rotate(10,38,15)"/>
-    <rect x="10" y="7" width="7" height="18" rx="3.5" fill="url(#kcape)" transform="rotate(-15,13,16)"/>
-    <rect x="47" y="5" width="7" height="18" rx="3.5" fill="url(#kcape)" transform="rotate(15,50,14)"/>
+
+  <!-- sombra no chão -->
+  <ellipse cx="45" cy="49" rx="41" ry="5.5" fill="#000" opacity="0.28"/>
+
+  <g stroke="#3A1E00" stroke-width="0.8" stroke-linejoin="round">
+    <!-- pernas caídas (esquerda) -->
+    <rect x="8"  y="30" width="16" height="7" rx="3.5" fill="url(#dcape)" transform="rotate(-12,16,33)"/>
+    <rect x="8"  y="38" width="16" height="7" rx="3.5" fill="url(#dcape)" transform="rotate(10,16,41)"/>
+    <rect x="5"  y="29" width="7"  height="6" rx="2"  fill="#3A2400" transform="rotate(-12,8,32)"/>
+    <rect x="5"  y="40" width="7"  height="6" rx="2"  fill="#3A2400" transform="rotate(10,8,43)"/>
+
+    <!-- braço caído pra cima -->
+    <rect x="34" y="6"  width="6" height="17" rx="3" fill="url(#dskin)" transform="rotate(-18,37,15)"/>
+
+    <!-- manto/corpo deitado -->
+    <rect x="18" y="24" width="46" height="24" rx="11" fill="url(#dcape)"/>
+    <rect x="22" y="26" width="34" height="9"  rx="4"  fill="url(#dgold)" opacity="0.85"/>
+    <ellipse cx="38" cy="36" rx="6" ry="5" fill="url(#dgem)"/>
+
+    <!-- cabeça -->
+    <ellipse cx="68" cy="34" rx="15" ry="13" fill="url(#dskin)"/>
+    <!-- olhos em X -->
+    <line x1="60" y1="29" x2="66" y2="35" stroke="#3A1E00" stroke-width="2"/>
+    <line x1="66" y1="29" x2="60" y2="35" stroke="#3A1E00" stroke-width="2"/>
+    <line x1="71" y1="29" x2="77" y2="35" stroke="#3A1E00" stroke-width="2"/>
+    <line x1="77" y1="29" x2="71" y2="35" stroke="#3A1E00" stroke-width="2"/>
+    <!-- boca aberta + língua -->
+    <ellipse cx="68" cy="42" rx="4" ry="3" fill="#5A1A1A"/>
+    <ellipse cx="70" cy="44" rx="2.6" ry="2" fill="#E2566E" stroke="none"/>
+    <!-- barba -->
+    <path d="M58 40 Q68 50 80 40 Q76 47 68 48 Q60 47 58 40 Z" fill="url(#dbeard)"/>
+
+    <!-- coroa caída ao lado da cabeça -->
+    <g transform="rotate(28,80,14)">
+      <rect x="70" y="11" width="20" height="8" rx="2" fill="url(#dgold)"/>
+      <polygon points="70,12 73,5 76,12" fill="url(#dgold)"/>
+      <polygon points="78,12 81,4 84,12" fill="url(#dgold)"/>
+      <polygon points="84,12 87,5 90,12" fill="url(#dgold)"/>
+      <circle cx="73" cy="7" r="1.4" fill="url(#dgem)"/>
+      <circle cx="81" cy="6" r="1.4" fill="url(#dgem)"/>
+      <circle cx="87" cy="7" r="1.4" fill="url(#dgem)"/>
+    </g>
+
+    <!-- estrelinhas de tontura sobre a cabeça -->
+    <g fill="#FFE680" stroke="#B8860B" stroke-width="0.5">
+      <polygon points="64,10 65,13 68,13 65.5,15 66.5,18 64,16 61.5,18 62.5,15 60,13 63,13"/>
+      <polygon points="74,4 74.7,6 77,6 75.2,7.4 75.9,9.6 74,8.3 72.1,9.6 72.8,7.4 71,6 73.3,6" transform="scale(0.8)" />
+    </g>
   </g>
 </svg>

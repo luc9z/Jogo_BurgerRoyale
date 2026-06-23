@@ -19,6 +19,18 @@ const WEAPON_ART = {
   laser:        { w: 74, tip: 43 },
 };
 
+// Tiro sintetizado por arma (WebAudio). crack = ruído filtrado, body = thump
+// grave. gain/dur/cut/body variam p/ dar identidade sonora a cada arma.
+const SHOT = {
+  pistol:        { gain: 0.20, dur: 0.10, cut: 1900, body: 170, bodyDur: 0.08 },
+  revolver:      { gain: 0.30, dur: 0.17, cut: 1200, body: 110, bodyDur: 0.15 },
+  shotgun:       { gain: 0.32, dur: 0.24, cut: 850,  body: 85,  bodyDur: 0.20 },
+  burst:         { gain: 0.16, dur: 0.07, cut: 2700, body: 230, bodyDur: 0.05 },
+  machinegun:    { gain: 0.13, dur: 0.06, cut: 2200, body: 200, bodyDur: 0.04 },
+  sniper:        { gain: 0.36, dur: 0.28, cut: 1000, body: 75,  bodyDur: 0.24 },
+  doubleshotgun: { gain: 0.36, dur: 0.26, cut: 800,  body: 70,  bodyDur: 0.22 },
+};
+
 export default class Player {
   constructor(scene) {
     this.scene = scene;
@@ -292,7 +304,7 @@ export default class Player {
 
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
-    this.scene.sound.play('sfx-shoot', { volume: 0.22 });
+    this._playShot();
 
     const baseAngle = Math.atan2(this.lastDir.y, this.lastDir.x);
     const w = this.weaponDef;
@@ -314,6 +326,71 @@ export default class Player {
     this.canShoot = false;
     this.scene.time.delayedCall(w.shootCd, () => { this.canShoot = true; });
     if (this.ammo <= 0) this._startReload();
+  }
+
+  // Tiro sintetizado — som diferente por arma, sem precisar de arquivos
+  _playShot() {
+    const mgr = this.scene.sound;
+    const ctx = mgr?.context;
+    // Fallback: navegador sem WebAudio → mp3 genérico
+    if (!ctx || ctx.state === 'closed') {
+      this.scene.sound.play('sfx-shoot', { volume: 0.22 });
+      return;
+    }
+    if (mgr.mute) return;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now    = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = mgr.volume ?? 1;
+    master.connect(ctx.destination);
+
+    if (this.weaponKey === 'laser') {
+      // Zap sci-fi: tom descendente
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(1300, now);
+      o.frequency.exponentialRampToValueAtTime(170, now + 0.18);
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.linearRampToValueAtTime(0.18, now + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+      o.connect(g); g.connect(master);
+      o.start(now); o.stop(now + 0.22);
+      return;
+    }
+
+    const p = SHOT[this.weaponKey] ?? SHOT.pistol;
+
+    // Crack — ruído branco filtrado (buffer reaproveitado)
+    if (!this._noiseBuf) {
+      const len = Math.floor(ctx.sampleRate * 0.3);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this._noiseBuf = buf;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = this._noiseBuf;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = p.cut;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(p.gain, now);
+    ng.gain.exponentialRampToValueAtTime(0.0001, now + p.dur);
+    src.connect(lp); lp.connect(ng); ng.connect(master);
+    src.start(now); src.stop(now + p.dur + 0.02);
+
+    // Body — thump grave que dá "peso" ao disparo
+    const o  = ctx.createOscillator();
+    const og = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(p.body, now);
+    o.frequency.exponentialRampToValueAtTime(p.body * 0.5, now + p.bodyDur);
+    og.gain.setValueAtTime(p.gain * 0.9, now);
+    og.gain.exponentialRampToValueAtTime(0.0001, now + p.bodyDur);
+    o.connect(og); og.connect(master);
+    o.start(now); o.stop(now + p.bodyDur + 0.02);
   }
 
   // ── BALA ──────────────────────────────────────────────────

@@ -641,7 +641,7 @@ export default class GameScene extends Phaser.Scene {
         .setOrigin(0.5).setDepth(D+1);
       this.tweens.add({ targets: title, scaleX: 1.06, scaleY: 1.06, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-      this.add.text(W/2, H/2-58, 'Você sobreviveu ao apocalipse dos palhaços!', ps(FONT.BODY, '#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-58, 'A Receita Sagrada está a salvo. O reino é seu, majestade!', ps(FONT.BODY, '#ffaa00')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-30, `Pontuação final: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE, '#ffd740')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-2,  `${MAX_LEVELS} fases concluídas`, ps(FONT.BODY, '#44ff88')).setOrigin(0.5).setDepth(D+1);
       if (isNew) {

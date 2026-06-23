@@ -95,6 +95,10 @@ export default class HUD {
     this._bannerSub = s.add.text(W / 2, H / 2 + 14, '', txt(FONT.BODY, '#ff8800'))
       .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
+    // Frase de lore por round (abaixo do banner)
+    this._bannerLore = s.add.text(W / 2, H / 2 + 40, '', txt(FONT.BODY, '#cc8866'))
+      .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
+
     s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar  |  ESPAÇO esquiva', txt(FONT.BODY, '#ffffff22'))
       .setOrigin(0.5, 1).setDepth(D);
   }
@@ -214,11 +218,20 @@ export default class HUD {
   }
 
   _showBanner(round, count) {
+    const LORE = {
+      1: 'As ruas fervem. Eles vêm pela Receita.',
+      2: 'Mais risadas ecoam na escuridão...',
+      3: 'Os palhaços gordos avançam. Segure a linha!',
+      4: 'O cerco aperta ao redor do castelo.',
+      5: 'O General Palhaço em pessoa. Acabe com isto!',
+    };
     this._banner.setText(`ROUND  ${round}`);
     this._bannerSub.setText(`${count} palhacos se aproximando...`);
-    this.scene.tweens.add({ targets: [this._banner, this._bannerSub], alpha: 1, duration: 380 });
+    this._bannerLore.setText(LORE[round] ?? 'A horda não tem fim...');
+    const targets = [this._banner, this._bannerSub, this._bannerLore];
+    this.scene.tweens.add({ targets, alpha: 1, duration: 380 });
     this.scene.time.delayedCall(2700, () => {
-      this.scene.tweens.add({ targets: [this._banner, this._bannerSub], alpha: 0, duration: 420 });
+      this.scene.tweens.add({ targets, alpha: 0, duration: 420 });
     });
   }
 

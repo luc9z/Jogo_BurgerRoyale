@@ -318,7 +318,7 @@ export default class MenuScene extends Phaser.Scene {
   // ── TRANSIÇÃO ─────────────────────────────────────────────
   _startGame() {
     this.cameras.main.fade(350, 0, 0, 0, false, (_, t) => {
-      if (t >= 1) this.scene.start('GameScene', { startLevel: 1 });
+      if (t >= 1) this.scene.start('StoryScene');
     });
   }
 

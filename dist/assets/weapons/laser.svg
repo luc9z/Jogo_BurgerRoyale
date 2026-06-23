@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="74" height="32" viewBox="0 0 74 32">
+  <g stroke="#140b05" stroke-width="1.4" stroke-linejoin="round">
+    <!-- empunhadura -->
+    <path d="M11 17 L17 17 L16 27 L10 27 Z" fill="#007788"/>
+    <path d="M16 19 Q19 25 23 19" fill="none" stroke="#222" stroke-width="2"/>
+    <!-- corpo sci-fi -->
+    <rect x="9" y="11" width="26" height="9" rx="3" fill="#007788"/>
+    <rect x="9" y="11" width="26" height="3" rx="1.5" fill="#00aabb" stroke="none"/>
+    <!-- célula de energia -->
+    <circle cx="22" cy="15.5" r="3.4" fill="#00ffee"/>
+    <circle cx="22" cy="15.5" r="1.5" fill="#ffffff" stroke="none"/>
+    <!-- emissor / cano -->
+    <rect x="33" y="13" width="30" height="4" rx="2" fill="#00ffee"/>
+    <rect x="34" y="13.6" width="28" height="1.4" rx="1" fill="#ffffff" stroke="none" opacity="0.7"/>
+    <!-- anéis emissores -->
+    <rect x="42" y="11.5" width="2.5" height="7" rx="1" fill="#00aabb"/>
+    <rect x="50" y="11.5" width="2.5" height="7" rx="1" fill="#00aabb"/>
+    <!-- ponta brilhante -->
+    <circle cx="65" cy="15" r="3.5" fill="#aaffff"/>
+    <circle cx="65" cy="15" r="1.6" fill="#ffffff" stroke="none"/>
+  </g>
+</svg>

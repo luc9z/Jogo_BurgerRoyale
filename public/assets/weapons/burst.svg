@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="58" height="32" viewBox="0 0 58 32">
+  <g stroke="#140b05" stroke-width="1.4" stroke-linejoin="round">
+    <!-- empunhadura -->
+    <path d="M11 17 L17 17 L16 27 L10 27 Z" fill="#cc6600"/>
+    <!-- guarda -->
+    <path d="M16 19 Q19 25 23 19" fill="none" stroke="#222" stroke-width="2"/>
+    <!-- corpo -->
+    <rect x="10" y="11" width="22" height="9" rx="2" fill="#cc6600"/>
+    <rect x="10" y="11" width="22" height="3" rx="1.5" fill="#ee8822" stroke="none"/>
+    <!-- carregador -->
+    <path d="M20 20 L27 20 L26 28 L21 28 Z" fill="#8a4400"/>
+    <!-- trilho superior -->
+    <rect x="13" y="9" width="14" height="2.5" rx="1" fill="#aa5500"/>
+    <!-- cano -->
+    <rect x="30" y="12.5" width="25" height="5" rx="2" fill="#ffbb44"/>
+    <rect x="31" y="13.5" width="23" height="1.6" rx="1" fill="#ffe0a0" stroke="none" opacity="0.6"/>
+    <rect x="52" y="11.5" width="4" height="7" rx="1.2" fill="#7a4400"/>
+  </g>
+</svg>

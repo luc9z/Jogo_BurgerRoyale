@@ -3,16 +3,21 @@ import { PLAYER, ARENA, DEPTH, EVT, WEAPONS, SVG_H } from '../constants.js';
 
 const SKIN = 'king-default';
 
-const GUN_STYLE = {
-  knife:        { type: 'knife', off: 10 },
-  pistol:       { type: 'gun', bodyLen: 10, bodyH: 7,  barrelLen: 17, barrelH: 4.5, col: 0xdddddd, bodyCol: 0x888888, off: 12 },
-  revolver:     { type: 'gun', bodyLen:  9, bodyH: 7,  barrelLen: 22, barrelH: 4.5, col: 0xeeaa44, bodyCol: 0x995511, off: 11, cylinder: true },
-  shotgun:      { type: 'gun', bodyLen: 11, bodyH: 10, barrelLen: 15, barrelH: 8,   col: 0xcc9966, bodyCol: 0x7a4422, off: 10 },
-  machinegun:   { type: 'gun', bodyLen: 13, bodyH: 8,  barrelLen: 30, barrelH: 3.5, col: 0x44dd77, bodyCol: 0x228844, off: 12, magazine: true },
-  sniper:       { type: 'gun', bodyLen: 13, bodyH: 6,  barrelLen: 40, barrelH: 2.5, col: 0x66bbff, bodyCol: 0x2266cc, off: 12, scope: true },
-  burst:        { type: 'gun', bodyLen: 11, bodyH: 7,  barrelLen: 22, barrelH: 4,   col: 0xffbb44, bodyCol: 0xcc6600, off: 12 },
-  laser:        { type: 'gun', bodyLen: 12, bodyH: 5,  barrelLen: 35, barrelH: 2,   col: 0x00ffee, bodyCol: 0x007788, off: 12, scope: true },
-  doubleshotgun:{ type: 'gun', bodyLen: 11, bodyH: 12, barrelLen: 14, barrelH: 10,  col: 0xff7744, bodyCol: 0x883322, off: 10 },
+// Assets de arma (SVG). Todas com empunhadura no ponto (14,18) do viewBox
+// (altura 32) → origem do sprite. `tip` = distância em px do grip à boca do
+// cano (p/ flash e origem do laser). `melee` desativa flash.
+const GUN_SCALE = 0.4;   // SVG carregado em 2× → 0.4 = ~0.8 do tamanho nativo
+const HAND_OFF  = 6;     // grip à frente do centro do rei, na direção da mira
+const WEAPON_ART = {
+  knife:        { w: 44, tip: 0,  melee: true },
+  pistol:       { w: 50, tip: 27 },
+  revolver:     { w: 54, tip: 30 },
+  shotgun:      { w: 62, tip: 38 },
+  burst:        { w: 58, tip: 34 },
+  machinegun:   { w: 70, tip: 42 },
+  sniper:       { w: 80, tip: 51 },
+  doubleshotgun:{ w: 60, tip: 36 },
+  laser:        { w: 74, tip: 43 },
 };
 
 export default class Player {
@@ -61,8 +66,10 @@ export default class Player {
     this.sprite.play(`${SKIN}-idle`);
 
     this.bullets       = s.physics.add.group({ allowGravity: false });
-    this._gunGfx       = s.add.graphics().setDepth(DEPTH.ENTITY + 1);
+    this._gunImg       = s.add.image(cx, cy, 'wpn-pistol').setDepth(DEPTH.ENTITY + 1);
+    this._gunGfx       = s.add.graphics().setDepth(DEPTH.ENTITY + 2); // só muzzle flash
     this._aimAssistGfx = s.add.graphics().setDepth(DEPTH.ENTITY + 2);
+    this._applyGunTexture(this.weaponKey);
 
     s.events.emit('hearts-changed', this.hearts);
     s.events.emit('ammo-changed',   this.ammo);
@@ -190,128 +197,52 @@ export default class Player {
     g.fillTriangle(ix, iy, ix - 5, iy - 9, ix + 5, iy - 9);
   }
 
+  // Aplica a textura SVG da arma + origem no ponto de empunhadura (14,18)
+  _applyGunTexture(key) {
+    const art = WEAPON_ART[key];
+    if (!this._gunImg || !art) return;
+    const tex = `wpn-${key}`;
+    if (!this.scene.textures.exists(tex)) { this._gunImg.setVisible(false); return; }
+    this._gunImg.setVisible(true);
+    this._gunImg.setTexture(tex);
+    this._gunImg.setOrigin(14 / art.w, 18 / 32);
+    this._gunImg.setScale(GUN_SCALE);
+  }
+
   _drawGun() {
     const g = this._gunGfx;
     g.clear();
-    const st = GUN_STYLE[this.weaponKey];
-    if (!st) return;
+    const art = WEAPON_ART[this.weaponKey];
+    if (!art || !this._gunImg) return;
 
     const px    = this.sprite.x, py = this.sprite.y;
     const angle = Math.atan2(this.lastDir.y, this.lastDir.x);
     const cos   = Math.cos(angle), sin = Math.sin(angle);
-    const pcos  = -sin, psin = cos;
-    const ox = px + cos * st.off, oy = py + sin * st.off;
+    const facingLeft = cos < 0;
 
-    // Desenha retângulo rotacionado: d0=início, len=comprimento, hw=meia-altura
-    const box = (d0, len, hw, col) => {
-      const ax = ox + cos*d0,       ay = oy + sin*d0;
-      const bx = ox + cos*(d0+len), by = oy + sin*(d0+len);
-      g.fillStyle(col, 1);
-      g.fillTriangle(ax+pcos*hw, ay+psin*hw, bx+pcos*hw, by+psin*hw, bx-pcos*hw, by-psin*hw);
-      g.fillTriangle(ax+pcos*hw, ay+psin*hw, bx-pcos*hw, by-psin*hw, ax-pcos*hw, ay-psin*hw);
-    };
+    // Grip na mão do rei, à frente do corpo na direção da mira.
+    const gx = px + cos * HAND_OFF;
+    const gy = py + sin * HAND_OFF;
+    this._gunImg.setVisible(true);
+    this._gunImg.setPosition(gx, gy);
+    this._gunImg.setRotation(angle);
+    // Espelha na vertical ao mirar p/ esquerda — mantém a arma "em pé"
+    this._gunImg.setFlipY(facingLeft);
 
-    if (st.type === 'knife') {
-      // Guarda (crossguard)
-      box(-3, 5, 5.5, 0x888866);
-      // Lâmina - triângulo apontado
-      const tipX = ox + cos*32, tipY = oy + sin*32;
-      g.fillStyle(0xddddef, 1);
-      g.fillTriangle(ox+pcos*3.5, oy+psin*3.5, ox-pcos*3.5, oy-psin*3.5, tipX, tipY);
-      // Reflexo na borda
-      g.fillStyle(0xffffff, 0.55);
-      g.fillTriangle(ox-pcos*0.5, oy-psin*0.5, ox-pcos*3.5, oy-psin*3.5, tipX, tipY);
-      if (this._attackLock) {
-        g.fillStyle(0xffffff, 0.6);
-        g.fillCircle(tipX, tipY, 5);
-      }
-      return;
-    }
-
-    // Mão segurando a arma — conecta a arma ao corpo (sem ficar "flutuando")
-    g.fillStyle(0x3a2412, 1);
-    g.fillCircle(ox, oy, st.bodyH * 0.65 + 2);
-    g.fillStyle(0xe7b98a, 1);
-    g.fillCircle(ox, oy, st.bodyH * 0.65);
-
-    // Contorno escuro atrás (silhueta) → destaca a arma do fundo
-    box(0, st.bodyLen, st.bodyH + 1.6, 0x140b05);
-    box(st.bodyLen, st.barrelLen, st.barrelH + 1.6, 0x140b05);
-
-    // Corpo / grip (mais largo, mais escuro)
-    box(0, st.bodyLen, st.bodyH, st.bodyCol);
-    // Cano (mais fino, mais claro)
-    box(st.bodyLen, st.barrelLen, st.barrelH, st.col);
-    // Reflexo no lado superior do cano (direção -perp = "cima" rotacionado)
-    const hlOff = st.barrelH * 0.6;
-    const bsX = ox + cos*st.bodyLen       - pcos*hlOff, bsY = oy + sin*st.bodyLen       - psin*hlOff;
-    const beX = ox + cos*(st.bodyLen+st.barrelLen) - pcos*hlOff, beY = oy + sin*(st.bodyLen+st.barrelLen) - psin*hlOff;
-    g.lineStyle(1, 0xffffff, 0.22);
-    g.lineBetween(bsX, bsY, beX, beY);
-
-    // Cilindro (revólver) — do lado de cima do corpo
-    if (st.cylinder) {
-      const cd = st.bodyLen * 0.5;
-      // cilindro fica no lado -perp (topo do corpo)
-      const cx2 = ox + cos*cd - pcos*4, cy2 = oy + sin*cd - psin*4;
-      g.fillStyle(0xeebb44, 1);
-      g.fillCircle(cx2, cy2, 5.5);
-      g.lineStyle(1.5, 0x664400, 1);
-      g.strokeCircle(cx2, cy2, 5.5);
-      g.fillStyle(0xcc9922, 1);
-      g.fillCircle(cx2, cy2, 2.5);
-    }
-
-    // Carregador (metralhadora) — perpendicular abaixo do corpo (+perp = "baixo")
-    if (st.magazine) {
-      const md = st.bodyLen * 0.52;
-      const mx2 = ox + cos*md, my2 = oy + sin*md;
-      const magW = 8, magH = 10;
-      const ph = st.bodyH;
-      const v0x = mx2 + pcos*ph,             v0y = my2 + psin*ph;
-      const v1x = mx2 + cos*magW + pcos*ph,  v1y = my2 + sin*magW + psin*ph;
-      const v2x = mx2 + cos*magW + pcos*(ph+magH), v2y = my2 + sin*magW + psin*(ph+magH);
-      const v3x = mx2 + pcos*(ph+magH),      v3y = my2 + psin*(ph+magH);
-      g.fillStyle(0x226644, 1);
-      g.fillTriangle(v0x, v0y, v1x, v1y, v2x, v2y);
-      g.fillTriangle(v0x, v0y, v2x, v2y, v3x, v3y);
-    }
-
-    // Luneta (sniper) — acima do cano, lado -perp
-    if (st.scope) {
-      const sd0 = st.bodyLen + 4;
-      const slen = st.barrelLen * 0.52;
-      const sOff = st.barrelH + 3.5; // distância do eixo (acima)
-      // corpo da luneta como retângulo deslocado
-      const ssAx = ox + cos*sd0             - pcos*sOff, ssAy = oy + sin*sd0             - psin*sOff;
-      const ssEx = ox + cos*(sd0+slen)       - pcos*sOff, ssEy = oy + sin*(sd0+slen)       - psin*sOff;
-      const hw2 = 2.5;
-      g.fillStyle(0x334455, 1);
-      g.fillTriangle(ssAx-pcos*hw2, ssAy-psin*hw2, ssEx-pcos*hw2, ssEy-psin*hw2, ssEx+pcos*hw2, ssEy+psin*hw2);
-      g.fillTriangle(ssAx-pcos*hw2, ssAy-psin*hw2, ssEx+pcos*hw2, ssEy+psin*hw2, ssAx+pcos*hw2, ssAy+psin*hw2);
-      // lente no centro da luneta
-      const lx = ox + cos*(sd0 + slen*0.65) - pcos*sOff;
-      const ly = oy + sin*(sd0 + slen*0.65) - psin*sOff;
-      g.fillStyle(0x88ddff, 0.9);
-      g.fillCircle(lx, ly, 3.5);
-      g.lineStyle(1, 0x336688, 0.8);
-      g.strokeCircle(lx, ly, 3.5);
-    }
-
-    // Flash de disparo
-    if (this._attackLock) {
-      const mx2 = ox + cos*(st.bodyLen + st.barrelLen);
-      const my2 = oy + sin*(st.bodyLen + st.barrelLen);
+    // Flash na boca do cano (não em arma branca)
+    if (this._attackLock && !art.melee && art.tip > 0) {
+      const mx = gx + cos * art.tip;
+      const my = gy + sin * art.tip;
       const fc  = this.weaponKey === 'laser' ? 0x00ffee : 0xffee44;
       const fc2 = this.weaponKey === 'laser' ? 0x00cccc : 0xffcc22;
       g.fillStyle(fc, 0.92);
-      g.fillCircle(mx2, my2, 6);
+      g.fillCircle(mx, my, 6);
       g.fillStyle(0xffffff, 0.75);
-      g.fillCircle(mx2, my2, 2.5);
+      g.fillCircle(mx, my, 2.5);
       for (let i = 0; i < 4; i++) {
         const ra = angle + (i * Math.PI / 2) + Math.PI / 4;
         g.lineStyle(1.5, fc2, 0.5);
-        g.lineBetween(mx2, my2, mx2 + Math.cos(ra)*10, my2 + Math.sin(ra)*10);
+        g.lineBetween(mx, my, mx + Math.cos(ra)*10, my + Math.sin(ra)*10);
       }
     }
   }
@@ -409,10 +340,10 @@ export default class Player {
   _fireLaser(angleRad) {
     const w   = this.weaponDef;
     const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
-    const st  = GUN_STYLE.laser;
-    // Origem no cano da arma
-    const bx  = this.sprite.x + cos * (st.off + st.bodyLen + st.barrelLen);
-    const by  = this.sprite.y + sin * (st.off + st.bodyLen + st.barrelLen);
+    // Origem na boca do cano da arma (grip + tip)
+    const muzz = HAND_OFF + WEAPON_ART.laser.tip;
+    const bx  = this.sprite.x + cos * muzz;
+    const by  = this.sprite.y + sin * muzz;
 
     // Hitscan — acha o inimigo mais próximo ao longo do raio
     const damage = Math.round(w.damage * this._damageMult);
@@ -493,6 +424,7 @@ export default class Player {
     this._reloadId++;
     this.weaponKey   = key;
     this.weaponDef   = WEAPONS[key];
+    this._applyGunTexture(key);
     this.ammo        = WEAPONS[key].isMelee ? -1 : WEAPONS[key].clipSize;
     this.isReloading = false;
     this.canShoot    = true;
@@ -579,6 +511,7 @@ export default class Player {
     this.scene.input.setDefaultCursor('default');
     this._crosshair.setVisible(false);
     this._gunGfx.clear();
+    if (this._gunImg) this._gunImg.setVisible(false);
 
     this._stopHurtBlink();
     this.sprite.setVelocity(0, 0);

@@ -42,10 +42,9 @@ export default class Enemy {
     this._chargeState  = 'idle';
     this._chargeAt     = 0;
     this._chargeDir    = { x: 0, y: 0 };
-    this._nextChargeAt = 0;
+    this._nextChargeAt = 0; // inicializado no primeiro frame
     this._phase        = 2; // 2→1→0 conforme HP cai
     this._enraged      = false;
-    this._weaponImg    = null;
   }
 
   _create(x, y) {
@@ -68,15 +67,6 @@ export default class Enemy {
     this.sprite.play(`${k}-idle`);
 
     s.tweens.add({ targets: this.sprite, alpha: 1, duration: 280 });
-
-    if (this._isChief) {
-      this._weaponImg = s.add.image(x, y, 'wicon-pistol')
-        .setDepth(DEPTH.ENTITY + 1)
-        .setOrigin(0.5, 0.5)
-        .setTint(0xffd740)
-        .setAlpha(0);
-      s.tweens.add({ targets: this._weaponImg, alpha: 1, duration: 400 });
-    }
 
     const hpY     = y - this._halfH - 10;
     const bgColor = this._isChief        ? 0x880000
@@ -203,14 +193,6 @@ export default class Enemy {
     const hpY = this.sprite.y - this._halfH - 10;
     this.hpBg.setPosition(this.sprite.x, hpY);
     this.hpBar.setPosition(this.sprite.x - this._hpBarW / 2, hpY);
-
-    if (this._weaponImg?.active) {
-      const flip = this.sprite.flipX;
-      const hw   = this._weaponImg.displayWidth * 0.5;
-      const ox   = flip ? -(30 + hw) : (30 + hw);
-      this._weaponImg.setPosition(this.sprite.x + ox, this.sprite.y - 6);
-      this._weaponImg.setFlipX(flip);
-    }
   }
 
   takeDamage(amount, dir) {
@@ -231,11 +213,9 @@ export default class Enemy {
       const hpPct = this.hp / this.maxHp;
       if (this._phase >= 2 && hpPct < 0.67) {
         this._phase = 1;
-        this._swapWeapon('wicon-shotgun', 0xff8800);
         this.scene.events.emit('boss-spawn-minions', this.x, this.y, 3);
       } else if (this._phase >= 1 && hpPct < 0.34) {
         this._phase = 0;
-        this._swapWeapon('wicon-machinegun', 0xff2200);
         this.scene.events.emit('boss-spawn-minions', this.x, this.y, 5);
       }
 
@@ -294,12 +274,6 @@ export default class Enemy {
     if (this.isDead) return;
     this.isDead = true;
 
-    if (this._weaponImg?.active) {
-      this.scene.tweens.add({ targets: this._weaponImg, alpha: 0, angle: 90, duration: 400,
-        onComplete: () => { if (this._weaponImg?.active) this._weaponImg.destroy(); this._weaponImg = null; },
-      });
-    }
-
     this.sprite.clearTint();
     this.sprite.setVelocity(0, 0);
     this.sprite.play(`${this.key}-death`, true);
@@ -322,17 +296,8 @@ export default class Enemy {
   _cleanup() {
     if (this._cleaned) return;
     this._cleaned = true;
-    if (this._weaponImg?.active) this._weaponImg.destroy();
-    this._weaponImg = null;
     if (this.shadow?.active) this.shadow.destroy();
     if (this.sprite?.active) this.sprite.destroy();
-  }
-
-  _swapWeapon(key, tint = 0xffffff) {
-    if (!this._weaponImg?.active) return;
-    this._weaponImg.setTexture(key).setTint(tint);
-    this.scene.tweens.add({ targets: this._weaponImg, scaleX: 1.3, scaleY: 1.3, duration: 120,
-      yoyo: true, ease: 'Back.easeOut' });
   }
 
   _deathFX() {

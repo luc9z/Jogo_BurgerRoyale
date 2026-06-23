@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="80" height="32" viewBox="0 0 80 32">
+  <g stroke="#140b05" stroke-width="1.4" stroke-linejoin="round">
+    <!-- coronha -->
+    <path d="M4 14 L13 14 L13 21 L5 22 Q3 18 4 14 Z" fill="#2266cc"/>
+    <!-- empunhadura -->
+    <path d="M14 18 L19 18 L18 27 L13 27 Z" fill="#2266cc"/>
+    <path d="M16 19 Q19 25 23 19" fill="none" stroke="#222" stroke-width="2"/>
+    <!-- corpo -->
+    <rect x="12" y="12" width="22" height="8" rx="2" fill="#2266cc"/>
+    <rect x="12" y="12" width="22" height="3" rx="1.5" fill="#3a85ee" stroke="none"/>
+    <!-- luneta -->
+    <rect x="20" y="6" width="16" height="5" rx="2.5" fill="#1a2a44"/>
+    <circle cx="22" cy="8.5" r="2.4" fill="#88ddff"/>
+    <circle cx="34" cy="8.5" r="2.4" fill="#88ddff"/>
+    <rect x="25" y="10" width="2.5" height="3" fill="#1a2a44" stroke="none"/>
+    <!-- cano muito longo -->
+    <rect x="32" y="13.5" width="44" height="4" rx="2" fill="#66bbff"/>
+    <rect x="33" y="14.3" width="42" height="1.4" rx="1" fill="#bfe4ff" stroke="none" opacity="0.6"/>
+    <!-- freio de boca -->
+    <rect x="73" y="12" width="5" height="7" rx="1.5" fill="#16335a"/>
+  </g>
+</svg>

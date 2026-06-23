@@ -53,7 +53,9 @@ export default class PauseScene extends Phaser.Scene {
     sg.lineStyle(1, COLOR.GOLD, 0.3);
     sg.lineBetween(W/2 - 130, H/2 - 53, W/2 + 130, H/2 - 53);
 
-    // Botões
+    // Botões (com navegação por controle)
+    this._gpBtns = [];
+    this._gpIdx  = 0;
     this._makeBtn(W/2, H/2 - 22,  'CONTINUAR',      0x1fcc3f, '#1fcc3f', () => this._resume());
     this._makeBtn(W/2, H/2 + 34,  'REINICIAR',      0xff8800, '#ff8800', () => this._restart());
     this._makeBtn(W/2, H/2 + 90,  'MENU PRINCIPAL', 0xcc1100, '#cc1100', () => this._toMenu());
@@ -62,9 +64,16 @@ export default class PauseScene extends Phaser.Scene {
     // volume master do Phaser, então muda ao vivo sem callback extra.
     makeVolumeSlider(this, W/2 - 30, H/2 + 132, 110, { depth: 2 });
 
-    // Dica ESC
-    this.add.text(W/2, H/2 + 166, 'ESC — continuar', ps(FONT.BODY, '#ffffff44'))
+    // Dica
+    this.add.text(W/2, H/2 + 166, 'ESC / B — continuar  |  A — selecionar', ps(FONT.BODY, '#ffffff44'))
       .setOrigin(0.5).setDepth(2);
+
+    // Seletor do controle
+    this._gpSel = this.add.graphics().setDepth(4);
+    this._gpPrev = { up: false, down: false, a: false, b: false, start: false };
+    this._gpEnabled = false;
+    this.time.delayedCall(250, () => { this._gpEnabled = true; });
+    this._drawGpSel();
 
     // ESC fecha o pause
     this.input.keyboard.once('keydown-ESC', () => this._resume());
@@ -79,15 +88,48 @@ export default class PauseScene extends Phaser.Scene {
     const label2 = this.add.text(x, y, label, ps(FONT.BODY, textColor))
       .setOrigin(0.5).setDepth(3);
 
+    const idx = this._gpBtns.length;
     btn.on('pointerover', () => {
       btn.setFillStyle(0x220028);
       this.tweens.add({ targets: [btn, label2], scaleX: 1.04, scaleY: 1.04, duration: 60 });
+      this._gpIdx = idx; this._drawGpSel();
     });
     btn.on('pointerout', () => {
       btn.setFillStyle(0x110015);
       this.tweens.add({ targets: [btn, label2], scaleX: 1, scaleY: 1, duration: 60 });
     });
     btn.on('pointerdown', onClick);
+
+    this._gpBtns.push({ x, y, w: 250, h: 40, col: strokeColor, action: onClick });
+  }
+
+  _drawGpSel() {
+    if (!this._gpSel || !this._gpBtns?.length) return;
+    const b = this._gpBtns[this._gpIdx];
+    this._gpSel.clear();
+    this._gpSel.lineStyle(3, b.col, 1);
+    this._gpSel.strokeRoundedRect(b.x - b.w/2 - 5, b.y - b.h/2 - 5, b.w + 10, b.h + 10, 6);
+  }
+
+  update() {
+    if (!this._gpEnabled) return;
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const ly = pad.leftStick?.y ?? 0;
+    const now = {
+      up:    !!(pad.buttons[12]?.pressed) || ly < -0.5,
+      down:  !!(pad.buttons[13]?.pressed) || ly >  0.5,
+      a:     !!(pad.buttons[0]?.pressed),
+      b:     !!(pad.buttons[1]?.pressed),
+      start: !!(pad.buttons[9]?.pressed),
+    };
+    const p = this._gpPrev;
+    const n = this._gpBtns.length;
+    if (now.up    && !p.up)    { this._gpIdx = (this._gpIdx - 1 + n) % n; this._drawGpSel(); }
+    if (now.down  && !p.down)  { this._gpIdx = (this._gpIdx + 1) % n;     this._drawGpSel(); }
+    if (now.a     && !p.a)     { this._gpBtns[this._gpIdx].action(); }
+    if ((now.b && !p.b) || (now.start && !p.start)) { this._resume(); } // B/Start = voltar
+    this._gpPrev = now;
   }
 
   _resume() {

@@ -626,7 +626,7 @@ export default class GameScene extends Phaser.Scene {
       this._goGpActions = [_goRestart, _goMenu];
       this._goBtnYs     = [H/2 + 86, H/2 + 140];
       this._goBtnCols   = [COLOR.WALL_GLOW, 0x555555];
-      this._goGpPrevs   = { up: false, down: false, a: false };
+      this._goGpPrevs   = { up: false, down: false, a: false, b: false };
       this._goGpEnabled = false;
       this._goSelector  = this.add.graphics().setDepth(D + 3);
       this.time.delayedCall(300, () => { this._goGpEnabled = true; });
@@ -774,7 +774,7 @@ export default class GameScene extends Phaser.Scene {
       this._goGpActions = [_vContinue, _vRestart, _vMenu];
       this._goBtnYs     = [H/2 + 36, H/2 + 86, H/2 + 136];
       this._goBtnCols   = [0x00ccff, COLOR.GOLD_LIGHT, 0x555555];
-      this._goGpPrevs   = { up: false, down: false, a: false };
+      this._goGpPrevs   = { up: false, down: false, a: false, b: false };
       this._goGpEnabled = false;
       this._goSelector  = this.add.graphics().setDepth(D + 3);
       this._voObjs.push(this._goSelector);
@@ -838,12 +838,14 @@ export default class GameScene extends Phaser.Scene {
       up:   !!(pad.buttons[12]?.pressed) || ly < -0.5,
       down: !!(pad.buttons[13]?.pressed) || ly >  0.5,
       a:    !!(pad.buttons[0]?.pressed),
+      b:    !!(pad.buttons[1]?.pressed),
     };
     const prev = this._goGpPrevs;
     const n    = this._goGpActions.length;
     if (now.up   && !prev.up)   { this._goGpIdx = (this._goGpIdx - 1 + n) % n; this._drawGoSelector(); }
     if (now.down && !prev.down) { this._goGpIdx = (this._goGpIdx + 1) % n;     this._drawGoSelector(); }
     if (now.a    && !prev.a)    { this._goGpActions[this._goGpIdx](); }
+    if (now.b    && !prev.b)    { this._goGpActions[n - 1](); } // B = voltar (MENU)
     this._goGpPrevs = now;
   }
 }

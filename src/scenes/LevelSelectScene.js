@@ -36,6 +36,8 @@ export default class LevelSelectScene extends Phaser.Scene {
     const startX = W / 2 - totalW / 2 + cardW / 2;
     const cardY  = H / 2 + 6;
 
+    this._gpCards = [];
+    this._gpIdx   = 0;
     for (let i = 0; i < MAX_LEVELS; i++) {
       const level = i + 1;
       this._makeCard(startX + i * (cardW + gap), cardY, cardW, level, level <= unlocked);
@@ -43,6 +45,43 @@ export default class LevelSelectScene extends Phaser.Scene {
 
     this._backBtn();
     this.input.keyboard.once('keydown-ESC', () => this.scene.start('MenuScene'));
+
+    // Navegação por controle
+    this._gpSel = this.add.graphics().setDepth(6);
+    this._gpPrev = { left: false, right: false, a: false, b: false };
+    this._gpEnabled = false;
+    this.time.delayedCall(250, () => { this._gpEnabled = true; });
+    this._drawGpSel();
+  }
+
+  _drawGpSel() {
+    if (!this._gpSel || !this._gpCards?.length) return;
+    const c = this._gpCards[this._gpIdx];
+    this._gpSel.clear();
+    this._gpSel.lineStyle(3, c.col, 1);
+    this._gpSel.strokeRect(c.cx - c.cw/2 - 5, c.cy - c.ch/2 - 5, c.cw + 10, c.ch + 10);
+  }
+
+  update() {
+    if (!this._gpEnabled) return;
+    const pad = this.input.gamepad?.getPad(0);
+    if (!pad) return;
+    const lx = pad.leftStick?.x ?? 0;
+    const now = {
+      left:  !!(pad.buttons[14]?.pressed) || lx < -0.5,
+      right: !!(pad.buttons[15]?.pressed) || lx >  0.5,
+      a:     !!(pad.buttons[0]?.pressed),
+      b:     !!(pad.buttons[1]?.pressed),
+    };
+    const p = this._gpPrev;
+    const n = this._gpCards.length;
+    if (n > 0) {
+      if (now.left  && !p.left)  { this._gpIdx = (this._gpIdx - 1 + n) % n; this._drawGpSel(); }
+      if (now.right && !p.right) { this._gpIdx = (this._gpIdx + 1) % n;     this._drawGpSel(); }
+      if (now.a     && !p.a)     { this.scene.start('GameScene', { startLevel: this._gpCards[this._gpIdx].level }); }
+    }
+    if (now.b && !p.b) { this.scene.start('MenuScene'); } // B = voltar
+    this._gpPrev = now;
   }
 
   _buildBg() {
@@ -95,8 +134,10 @@ export default class LevelSelectScene extends Phaser.Scene {
       this.add.rectangle(cx, by, cw - 28, 30, COLOR.WALL).setStrokeStyle(1, info.col);
       this.add.text(cx, by, 'JOGAR', txt(FONT.BODY, '#ffffff')).setOrigin(0.5);
 
+      const idx = this._gpCards.length;
+      this._gpCards.push({ cx, cy, cw, ch, level, col });
       bg.setInteractive({ useHandCursor: true });
-      bg.on('pointerover', () => { bg.setFillStyle(0x220038); this.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.04, duration: 70 }); });
+      bg.on('pointerover', () => { bg.setFillStyle(0x220038); this.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.04, duration: 70 }); this._gpIdx = idx; this._drawGpSel?.(); });
       bg.on('pointerout',  () => { bg.setFillStyle(0x14001e); this.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 70 }); });
       bg.on('pointerdown', () => this.scene.start('GameScene', { startLevel: level }));
     } else {

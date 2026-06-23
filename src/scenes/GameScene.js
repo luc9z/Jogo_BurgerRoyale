@@ -305,12 +305,41 @@ export default class GameScene extends Phaser.Scene {
       const p = this._pickups[i];
       if (Phaser.Math.Distance.Between(this.player.x, this.player.y, p.x, p.y) < 32) {
         this.player.heal();
-        // Faísca rápida ao coletar
+        // Faísca + chime ao coletar
         this._healPickFX(p.x, p.y);
+        this._playHealSound();
         p.destroy();
         this._pickups.splice(i, 1);
       }
     }
+  }
+
+  // Chime alegre ao pegar a vida (sintetizado, 3 notas ascendentes)
+  _playHealSound() {
+    const mgr = this.sound;
+    const ctx = mgr?.context;
+    if (!ctx || ctx.state === 'closed' || mgr.mute) return;
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now    = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = (mgr.volume ?? 1) * 0.5;
+    master.connect(ctx.destination);
+
+    // Mi–Sol–Dó (arpejo maior, sensação positiva)
+    const notes = [659.25, 783.99, 1046.5];
+    notes.forEach((f, i) => {
+      const t = now + i * 0.07;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.22, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + 0.24);
+    });
   }
 
   // Faísca de corações ao coletar a cura

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME, COLOR } from '../constants.js';
 import { txt, FONT } from '../ui/text.js';
 import { uiBlip } from '../systems/Sfx.js';
+import { makeVolumeSlider, applySavedAudio } from '../ui/volumeSlider.js';
 
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
@@ -319,59 +320,11 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   // ── ÁUDIO / VOLUME ────────────────────────────────────────
-  _applyAudioSettings() {
-    const v = parseInt(localStorage.getItem('br_volume') ?? '70', 10);
-    const m = localStorage.getItem('br_muted') === '1';
-    this.sound.volume = Phaser.Math.Clamp(v, 0, 100) / 100;
-    this.sound.mute   = m;
-  }
+  _applyAudioSettings() { applySavedAudio(this); }
 
   _buildVolume() {
-    const bx = W - 150, by = 28;
-    const g = this.add.graphics().setDepth(5);
-    g.fillStyle(0x000000, 0.45); g.fillRoundedRect(bx, by - 16, 140, 32, 6);
-    g.lineStyle(1, 0x553333, 0.7); g.strokeRoundedRect(bx, by - 16, 140, 32, 6);
-
-    this.add.text(bx + 8, by, '♪', txt(FONT.BODY, '#88ffcc')).setOrigin(0, 0.5).setDepth(6);
-
-    const pct = this.add.text(bx + 74, by, '', txt(FONT.BODY, '#ffffff'))
-      .setOrigin(0.5, 0.5).setDepth(6);
-
-    const refresh = () => {
-      pct.setText(this.sound.mute ? 'MUDO' : `${Math.round(this.sound.volume * 100)}%`);
-      pct.setColor(this.sound.mute ? '#ff6666' : '#ffffff');
-    };
-
-    const mkArrow = (ox, label, fn) => {
-      const t = this.add.text(bx + ox, by, label, txt(FONT.BODY, '#ffd740'))
-        .setOrigin(0.5, 0.5).setDepth(6).setInteractive({ useHandCursor: true });
-      t.on('pointerover', () => t.setColor('#ffffff'));
-      t.on('pointerout',  () => t.setColor('#ffd740'));
-      t.on('pointerdown', () => { fn(); refresh(); uiBlip(this, true); });
-      return t;
-    };
-
-    const setVol = d => {
-      this.sound.mute = false;
-      const v = Phaser.Math.Clamp(Math.round(this.sound.volume * 100) + d, 0, 100);
-      this.sound.volume = v / 100;
-      localStorage.setItem('br_volume', String(v));
-      localStorage.setItem('br_muted', '0');
-    };
-
-    mkArrow(34,  '−', () => setVol(-10));
-    mkArrow(114, '+', () => setVol(+10));
-
-    // Toque no ♪ alterna mudo
-    this.add.text(bx + 8, by, '♪', txt(FONT.BODY, '#88ffcc'))
-      .setOrigin(0, 0.5).setDepth(7).setInteractive({ useHandCursor: true })
-      .on('pointerdown', () => {
-        this.sound.mute = !this.sound.mute;
-        localStorage.setItem('br_muted', this.sound.mute ? '1' : '0');
-        refresh(); if (!this.sound.mute) uiBlip(this, true);
-      });
-
-    refresh();
+    // Slider horizontal clicável no topo-direito
+    makeVolumeSlider(this, W - 160, 28, 110, { depth: 6 });
   }
 
   // ── TRANSIÇÃO ─────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, COLOR, DEPTH } from '../constants.js';
 import { txt, FONT } from '../ui/text.js';
+import { makeVolumeSlider } from '../ui/volumeSlider.js';
 
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
@@ -21,7 +22,7 @@ export default class PauseScene extends Phaser.Scene {
     this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.78).setDepth(0);
 
     // Borda decorativa no centro
-    const panelW = 340, panelH = 310;
+    const panelW = 340, panelH = 372;
     const panel = this.add.graphics().setDepth(1);
     panel.fillStyle(0x0c000f, 0.95);
     panel.fillRoundedRect(W/2 - panelW/2, H/2 - panelH/2, panelW, panelH, 8);
@@ -57,8 +58,14 @@ export default class PauseScene extends Phaser.Scene {
     this._makeBtn(W/2, H/2 + 34,  'REINICIAR',      0xff8800, '#ff8800', () => this._restart());
     this._makeBtn(W/2, H/2 + 90,  'MENU PRINCIPAL', 0xcc1100, '#cc1100', () => this._toMenu());
 
+    // Controle de volume (slider horizontal clicável)
+    makeVolumeSlider(this, W/2 - 30, H/2 + 132, 110, {
+      depth: 2,
+      onChange: () => this.scene.get('GameScene')?._music?.refreshVolume(),
+    });
+
     // Dica ESC
-    this.add.text(W/2, H/2 + 132, 'ESC — continuar', ps(FONT.BODY, '#ffffff44'))
+    this.add.text(W/2, H/2 + 166, 'ESC — continuar', ps(FONT.BODY, '#ffffff44'))
       .setOrigin(0.5).setDepth(2);
 
     // ESC fecha o pause

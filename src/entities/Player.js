@@ -52,6 +52,7 @@ export default class Player {
     this.isInvincible = false;
     this.isDead       = false;
     this.isMoving     = false;
+    this.maxHearts    = PLAYER.MAX_HEARTS;
     this.hearts       = PLAYER.MAX_HEARTS;
     this.lastDir      = new Phaser.Math.Vector2(1, 0);
     this._attackLock    = false;
@@ -628,10 +629,19 @@ export default class Player {
 
   // ── CURA ──────────────────────────────────────────────────
   heal() {
-    if (this.isDead || this.hearts >= PLAYER.MAX_HEARTS) return;
-    this.hearts = Math.min(PLAYER.MAX_HEARTS, this.hearts + 1);
+    if (this.isDead || this.hearts >= this.maxHearts) return;
+    this.hearts = Math.min(this.maxHearts, this.hearts + 1);
     this.scene.events.emit('hearts-changed', this.hearts);
     this.scene.cameras.main.flash(90, 0, 200, 0, false);
+  }
+
+  // Vida extra: aumenta o máximo de corações e enche a vida
+  addMaxHeart() {
+    this.maxHearts = Math.min(8, this.maxHearts + 1);
+    this.hearts    = this.maxHearts;
+    this.scene.events.emit('maxhearts-changed', this.maxHearts);
+    this.scene.events.emit('hearts-changed', this.hearts);
+    this.scene.cameras.main.flash(120, 255, 80, 140, false);
   }
 
   // ── BÔNUS DE UPGRADES ────────────────────────────────────

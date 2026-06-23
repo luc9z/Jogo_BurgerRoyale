@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ENEMY, ENEMY_TYPES, DEPTH, SVG_H } from '../constants.js';
+import { FONT } from '../ui/text.js';
 
 const HP_BAR_W      = 40;
 const HP_BAR_W_BOSS = 80;
@@ -264,7 +265,7 @@ export default class Enemy {
 
     const t = this.scene.add.text(this.x, this.y - 55, 'FÚRIA!', {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: '13px', color: '#ff2200',
+      fontSize: `${FONT.VALUE}px`, color: '#ff2200',
       stroke: '#000000', strokeThickness: 5,
     }).setDepth(DEPTH.FX + 2).setOrigin(0.5);
     this.scene.tweens.add({
@@ -332,7 +333,7 @@ export default class Enemy {
     const { x, y } = this.sprite;
     const t = this.scene.add.text(x, y - 20, `+${this.points}`, {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: this.type === 'clown-fat' ? '10px' : '10px',
+      fontSize: `${FONT.BODY}px`,
       color: this.type === 'clown-fat' ? '#ff8800' : '#ffd740',
       stroke: '#000', strokeThickness: 4,
     }).setDepth(DEPTH.FX + 1);
@@ -350,7 +351,7 @@ export default class Enemy {
     const big = amount >= 80;
     const t = this.scene.add.text(x, y, `${Math.round(amount)}`, {
       fontFamily: '"Press Start 2P", monospace',
-      fontSize: big ? '14px' : '10px',
+      fontSize: `${big ? FONT.VALUE : FONT.BODY}px`,
       color: big ? '#ffdd33' : '#ffffff',
       stroke: '#000', strokeThickness: big ? 5 : 3,
     }).setOrigin(0.5).setDepth(DEPTH.FX + 2);

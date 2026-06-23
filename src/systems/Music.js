@@ -14,7 +14,12 @@ export default class Music {
     this._timer = null;
     this._master = null;
     this._ctx = null;
-    this._vol = 0.16;
+    this._base = 0.42; // volume base da trilha (antes da multiplicação global)
+  }
+
+  _gain() {
+    const mgr = this.scene.sound;
+    return mgr.mute ? 0.0001 : (mgr.volume ?? 1) * this._base;
   }
 
   start() {
@@ -27,7 +32,7 @@ export default class Music {
     this._master = ctx.createGain();
     const now = ctx.currentTime;
     this._master.gain.setValueAtTime(0.0001, now);
-    this._master.gain.linearRampToValueAtTime(this._vol, now + 1.6); // fade-in
+    this._master.gain.linearRampToValueAtTime(this._gain(), now + 1.2); // fade-in
     this._master.connect(ctx.destination);
 
     this._beat    = 0.5;                 // s por tempo (~120 BPM)
@@ -53,10 +58,10 @@ export default class Music {
     }
   }
 
-  setVolume(v) {
-    this._vol = v;
+  // Reaplica o volume global/mudo (chamado quando o usuário muda no menu/pause)
+  refreshVolume() {
     if (this._master && this._ctx) {
-      this._master.gain.setValueAtTime(v, this._ctx.currentTime);
+      this._master.gain.setValueAtTime(this._gain(), this._ctx.currentTime);
     }
   }
 

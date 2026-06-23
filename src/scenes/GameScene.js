@@ -207,11 +207,13 @@ export default class GameScene extends Phaser.Scene {
       this.hud.setCombo(0, 1);
     }
 
-    // Batida cardíaca quando o HP está crítico (1 coração)
+    // HP crítico (1 coração): batida cardíaca + tremores sutis de vez em quando
     if (!this._roundEnding && this.player.hearts === 1 && !this.player.isDead) {
-      if (this.time.now >= (this._nextBeat || 0)) {
+      const now = this.time.now;
+      if (now >= (this._nextBeat || 0)) {
         heartbeat(this);
-        this._nextBeat = this.time.now + 1100;
+        this.cameras.main.shake(150, 0.0035); // tremor leve junto da batida
+        this._nextBeat = now + 1150;
       }
     }
 
@@ -256,6 +258,7 @@ export default class GameScene extends Phaser.Scene {
       score:         this.score,
       round:         this.enemies.round,
       hearts:        this.player.hearts,
+      maxHearts:     this.player.maxHearts,
       currentWeapon: this.player.weaponKey,
     });
   }
@@ -266,8 +269,9 @@ export default class GameScene extends Phaser.Scene {
     switch (upgrade.key) {
       case 'heal':   this.player.heal(); break;
       case 'speed':  this.player.addSpeedBonus(25); break;
-      case 'damage': this.player.addDamageBonus(0.20); break;
+      case 'damage': this.player.addDamageBonus(0.25); break;
       case 'reload': this.player.addReloadBonus(0.25); break;
+      case 'maxhp':  this.player.addMaxHeart(); break;
       default:
         if (upgrade.key in WEAPONS) this.player.changeWeapon(upgrade.key);
     }

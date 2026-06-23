@@ -10,22 +10,26 @@ const ps = txt;
 
 // Armas via upgrade. tier = posição na escada — só aparecem armas de tier
 // MAIOR que a equipada, então a evolução é sempre crescente (nunca volta).
+// Preços-base ALTOS (o combo multiplica os pontos ganhos). Em _pickOptions o
+// custo ainda escala com o round (fica mais caro nas fases avançadas).
 const WEAPON_POOL = [
-  { key: 'revolver',      label: 'REVÓLVER',       tier: 1, line1: '62 dano · 6 tiros',     line2: 'preciso, longo alcance', cost: 420,  color: 0xeeaa44 },
-  { key: 'shotgun',       label: 'ESCOPETA',       tier: 2, line1: '24×6 · 7 tiros',        line2: 'devastador de perto',    cost: 520,  color: 0xff7a33 },
-  { key: 'burst',         label: 'BURST',          tier: 3, line1: '30×3 · 24 balas',       line2: 'rajada precisa de 3',    cost: 640,  color: 0xffaa00 },
-  { key: 'machinegun',    label: 'METRALHADORA',   tier: 4, line1: '16 dano · 40 balas',    line2: 'disparo contínuo',       cost: 760,  color: 0x44ffaa },
-  { key: 'sniper',        label: 'SNIPER',         tier: 5, line1: '210 dano · 5 tiros',    line2: 'alcance máximo, letal',  cost: 900,  color: 0x66bbff },
-  { key: 'doubleshotgun', label: 'ESCOPETA DUPLA', tier: 6, line1: '26×8 · 8 tiros',        line2: 'caos total de perto',    cost: 1050, color: 0xff5533 },
-  { key: 'laser',         label: 'LASER',          tier: 7, line1: '72 dano · instantâneo', line2: 'feixe que atravessa',    cost: 1200, color: 0x00ffee },
+  { key: 'revolver',      label: 'REVÓLVER',       tier: 1, line1: '62 dano · 6 tiros',     line2: 'preciso, longo alcance', cost: 650,  color: 0xeeaa44 },
+  { key: 'shotgun',       label: 'ESCOPETA',       tier: 2, line1: '24×6 · 7 tiros',        line2: 'devastador de perto',    cost: 850,  color: 0xff7a33 },
+  { key: 'burst',         label: 'BURST',          tier: 3, line1: '30×3 · 24 balas',       line2: 'rajada precisa de 3',    cost: 1100, color: 0xffaa00 },
+  { key: 'machinegun',    label: 'METRALHADORA',   tier: 4, line1: '16 dano · 40 balas',    line2: 'disparo contínuo',       cost: 1400, color: 0x44ffaa },
+  { key: 'sniper',        label: 'SNIPER',         tier: 5, line1: '210 dano · 5 tiros',    line2: 'alcance máximo, letal',  cost: 1750, color: 0x66bbff },
+  { key: 'doubleshotgun', label: 'ESCOPETA DUPLA', tier: 6, line1: '26×8 · 8 tiros',        line2: 'caos total de perto',    cost: 2150, color: 0xff5533 },
+  { key: 'laser',         label: 'LASER',          tier: 7, line1: '72 dano · instantâneo', line2: 'feixe que atravessa',    cost: 2600, color: 0x00ffee },
 ];
 
-// Bônus não relacionados a arma
+// Bônus. `minRound` = só aparece a partir daquele round (melhorias melhores
+// surgem conforme a fase). Custo também escala com o round em _pickOptions.
 const BONUS_POOL = [
-  { key: 'heal',   label: 'CURAR',      line1: 'recupera 1 coração',    line2: '',                    cost: 300, color: 0xff2244 },
-  { key: 'speed',  label: 'ADRENALINA', line1: '+25 velocidade',        line2: 'permanente',          cost: 350, color: 0xffd740 },
-  { key: 'damage', label: 'DANO+',      line1: '+20% dano em tudo',     line2: 'permanente, empilha', cost: 600, color: 0xff8800 },
-  { key: 'reload', label: 'RECARGA+',   line1: '-25% tempo de recarga', line2: 'permanente',          cost: 420, color: 0x88ffcc },
+  { key: 'heal',   label: 'CURAR',       line1: 'recupera 1 coração',     line2: '',                    cost: 450,  color: 0xff2244, minRound: 1 },
+  { key: 'speed',  label: 'ADRENALINA',  line1: '+25 velocidade',         line2: 'permanente',          cost: 550,  color: 0xffd740, minRound: 1 },
+  { key: 'reload', label: 'RECARGA+',    line1: '-25% tempo de recarga',  line2: 'permanente',          cost: 650,  color: 0x88ffcc, minRound: 2 },
+  { key: 'damage', label: 'DANO+',       line1: '+25% dano em tudo',      line2: 'permanente, empilha', cost: 900,  color: 0xff8800, minRound: 2 },
+  { key: 'maxhp',  label: 'VIDA EXTRA',  line1: '+1 coração máximo',      line2: 'e enche a vida',      cost: 1300, color: 0xff5588, minRound: 3 },
 ];
 
 const ICON_KEYS = ['pistol', 'revolver', 'shotgun', 'burst', 'machinegun', 'sniper', 'doubleshotgun', 'laser'];
@@ -110,10 +114,11 @@ export default class UpgradeScene extends Phaser.Scene {
   }
 
   _buildCards() {
-    const { score = 0, hearts = PLAYER.MAX_HEARTS, currentWeapon = 'pistol' } = this._data;
+    const { score = 0, hearts = PLAYER.MAX_HEARTS, currentWeapon = 'pistol',
+            round = 1, maxHearts = PLAYER.MAX_HEARTS } = this._data;
     const D = DEPTH.OVERLAY + 2;
 
-    const options = this._pickOptions(hearts, score, currentWeapon);
+    const options = this._pickOptions(hearts, maxHearts, currentWeapon, round);
     const n       = options.length;
     const cardW   = 210, cardH = 240, gap = 18;
     const totalW  = cardW * n + gap * (n - 1);
@@ -125,20 +130,29 @@ export default class UpgradeScene extends Phaser.Scene {
     });
   }
 
-  _pickOptions(hearts, score, currentWeapon) {
+  // Custo escala com o round: +12% por round além do 1º (fica mais caro)
+  _scaleCost(base, round) {
+    return Math.round(base * (1 + (round - 1) * 0.12) / 10) * 10;
+  }
+
+  _pickOptions(hearts, maxHearts, currentWeapon, round) {
     const curTier = WEAPONS[currentWeapon]?.tier ?? 0;
+    const scale = o => ({ ...o, cost: this._scaleCost(o.cost, round) });
 
     // Só armas ACIMA do tier atual → evolução sempre crescente, nunca repete.
     const upgrades = WEAPON_POOL.filter(w => w.tier > curTier).sort((a, b) => a.tier - b.tier);
 
     let weapon = null;
     if (upgrades.length) {
-      // próxima da escada, ou a seguinte (pequeno salto) — mantém variedade
-      weapon = Phaser.Utils.Array.GetRandom(upgrades.slice(0, 2));
+      weapon = scale(Phaser.Utils.Array.GetRandom(upgrades.slice(0, 2)));
     }
 
+    // Bônus liberados pela fase (minRound). 'heal'/'maxhp' respeitam a vida.
     const bonusPool = Phaser.Utils.Array.Shuffle(
-      BONUS_POOL.filter(b => !(b.key === 'heal' && hearts >= PLAYER.MAX_HEARTS))
+      BONUS_POOL
+        .filter(b => round >= (b.minRound ?? 1))
+        .filter(b => !(b.key === 'heal' && hearts >= maxHearts))
+        .map(scale),
     );
 
     // 1 arma (se houver upgrade) + bônus até completar 3 cartas
@@ -246,6 +260,18 @@ export default class UpgradeScene extends Phaser.Scene {
         g.fillStyle(0xffffff, a * 0.3);
         g.fillCircle(cx - 8, cy - 5, 4);
         break;
+
+      case 'maxhp': {
+        // Coração + sinal de "+" (vida extra)
+        g.fillStyle(col, a);
+        g.fillCircle(cx - 6, cy - 2, 9);
+        g.fillCircle(cx + 6, cy - 2, 9);
+        g.fillTriangle(cx - 13, cy + 5, cx + 13, cy + 5, cx, cy + 16);
+        g.fillStyle(0xffffff, a);
+        g.fillRect(cx - 1.5, cy - 6, 3, 12);
+        g.fillRect(cx - 6, cy - 1.5, 12, 3);
+        break;
+      }
 
       case 'speed': {
         g.fillStyle(col, a);

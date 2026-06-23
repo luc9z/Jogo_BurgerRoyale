@@ -39,6 +39,7 @@ export default class HUD {
     this._heartGfx     = s.add.graphics().setDepth(D + 2);
     this._heartOriginX = lx + 48;
     this._heartOriginY = ly + 8;
+    this._maxHearts    = PLAYER.MAX_HEARTS;
     this._drawHearts(PLAYER.MAX_HEARTS);
 
     // ── Ammo ────────────────────────────────────────────────
@@ -109,9 +110,10 @@ export default class HUD {
     const ox = this._heartOriginX;
     const oy = this._heartOriginY;
     const S  = 2;
-    const gap = 22;
+    // Aperta o espaçamento quando há muitos corações (vida extra)
+    const gap = this._maxHearts > 5 ? 17 : 22;
     g.clear();
-    for (let i = 0; i < PLAYER.MAX_HEARTS; i++) {
+    for (let i = 0; i < this._maxHearts; i++) {
       const x     = ox + i * gap;
       const alive = i < filled;
       g.fillStyle(alive ? 0xff2222 : 0x330000, alive ? 1 : 0.5);
@@ -191,6 +193,7 @@ export default class HUD {
       'reload-done':       ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText(''); },
       'show-round-banner': (r, c) => this._showBanner(r, c),
       'dash-changed':      (c, m) => this._drawDash(c, m),
+      'maxhearts-changed': mx     => { this._maxHearts = mx; this._setHearts(mx); },
       [EVT.WEAPON_CHANGED]: key   => this._onWeaponChanged(key),
     };
     for (const evt in h) s.events.on(evt, h[evt]);

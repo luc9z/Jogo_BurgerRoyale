@@ -7,7 +7,8 @@ const SKIN = 'king-default';
 // (altura 32) → origem do sprite. `tip` = distância em px do grip à boca do
 // cano (p/ flash e origem do laser). `melee` desativa flash.
 const GUN_SCALE = 0.4;   // SVG carregado em 2× → 0.4 = ~0.8 do tamanho nativo
-const HAND_OFF  = 6;     // grip à frente do centro do rei, na direção da mira
+const HAND_OFF  = 18;    // grip à frente do centro do rei — fora do tronco
+const HAND_DROP = 12;    // desce p/ altura da mão (não no peito)
 const WEAPON_ART = {
   pistol:       { w: 50, tip: 27 },
   revolver:     { w: 54, tip: 30 },
@@ -231,9 +232,10 @@ export default class Player {
     const cos   = Math.cos(angle), sin = Math.sin(angle);
     const facingLeft = cos < 0;
 
-    // Grip na mão do rei, à frente do corpo na direção da mira.
+    // Grip na mão do rei: à frente do corpo (fora do tronco) e na altura
+    // da mão (HAND_DROP desce), não colado no peito.
     const gx = px + cos * HAND_OFF;
-    const gy = py + sin * HAND_OFF;
+    const gy = py + sin * HAND_OFF + HAND_DROP;
     this._gunImg.setVisible(true);
     this._gunImg.setPosition(gx, gy);
     this._gunImg.setRotation(angle);
@@ -416,10 +418,10 @@ export default class Player {
   _fireLaser(angleRad) {
     const w   = this.weaponDef;
     const cos = Math.cos(angleRad), sin = Math.sin(angleRad);
-    // Origem na boca do cano da arma (grip + tip)
+    // Origem na boca do cano da arma (grip + tip), na altura da mão
     const muzz = HAND_OFF + WEAPON_ART.laser.tip;
     const bx  = this.sprite.x + cos * muzz;
-    const by  = this.sprite.y + sin * muzz;
+    const by  = this.sprite.y + sin * muzz + HAND_DROP;
 
     // Hitscan — acha o inimigo mais próximo ao longo do raio
     const damage = Math.round(w.damage * this._damageMult);

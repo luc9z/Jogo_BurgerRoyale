@@ -5,6 +5,7 @@ import {
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
 import Music        from '../systems/Music.js';
+import { roundHorn, heartbeat } from '../systems/Sfx.js';
 import HUD          from '../ui/HUD.js';
 import { txt, FONT } from '../ui/text.js';
 import {
@@ -131,6 +132,7 @@ export default class GameScene extends Phaser.Scene {
       this._saveProgress(r);
       // Reinicia o limite de tempo da rodada (cresce com o round)
       this._roundTimeLeft = ROUND.TIME_MS + (r - 1) * ROUND.TIME_PER_ROUND;
+      roundHorn(this); // clarinada de início de round
     };
 
     this.events.on('resume', onResume);
@@ -200,6 +202,14 @@ export default class GameScene extends Phaser.Scene {
     if (this._combo > 0 && this.time.now > this._comboUntil) {
       this._combo = 0;
       this.hud.setCombo(0, 1);
+    }
+
+    // Batida cardíaca quando o HP está crítico (1 coração)
+    if (!this._roundEnding && this.player.hearts === 1 && !this.player.isDead) {
+      if (this.time.now >= (this._nextBeat || 0)) {
+        heartbeat(this);
+        this._nextBeat = this.time.now + 1100;
+      }
     }
 
     if (!this._roundEnding && this.enemies.isRoundComplete()) {

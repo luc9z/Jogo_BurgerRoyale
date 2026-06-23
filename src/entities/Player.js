@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PLAYER, ARENA, DEPTH, EVT, WEAPONS, SVG_H } from '../constants.js';
+import { footstep } from '../systems/Sfx.js';
 
 const SKIN = 'king-default';
 
@@ -420,6 +421,15 @@ export default class Player {
 
     sprite.setVelocity(vx, vy);
     this.isMoving = (vx !== 0 || vy !== 0);
+
+    // Passos: toca em intervalo enquanto anda
+    if (this.isMoving) {
+      const now = this.scene.time.now;
+      if (now >= (this._nextStep || 0)) {
+        footstep(this.scene);
+        this._nextStep = now + 300;
+      }
+    }
 
     if (!this._attackLock) {
       const anim = this.isMoving ? `${SKIN}-walk` : `${SKIN}-idle`;

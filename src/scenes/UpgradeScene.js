@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, WEAPONS, PLAYER, DEPTH } from '../constants.js';
 import { txt, FONT } from '../ui/text.js';
+import { uiBlip } from '../systems/Sfx.js';
 
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
@@ -215,6 +216,7 @@ export default class UpgradeScene extends Phaser.Scene {
       bg.on('pointerover', () => {
         bg.setFillStyle(0x220038);
         bg.setStrokeStyle(2, opt.color);
+        uiBlip(this);
         this.tweens.add({ targets: bg, scaleX: 1.04, scaleY: 1.04, duration: 70 });
         // Mouse move o selected box para a carta sob o cursor
         this._gpIdx = idx;
@@ -225,7 +227,7 @@ export default class UpgradeScene extends Phaser.Scene {
         this.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 70 });
       });
       bg.on('pointerdown', () => {
-        if (!this._chosen) { this._chosen = true; this._choose(opt); }
+        if (!this._chosen) { this._chosen = true; uiBlip(this, true); this._choose(opt); }
       });
 
       this._gpCards.push({ bg, opt, cx, cy, cw, ch, fillCol, bordCol });

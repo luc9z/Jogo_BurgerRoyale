@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, COLOR } from '../constants.js';
 import { txt, FONT } from '../ui/text.js';
+import { uiBlip } from '../systems/Sfx.js';
 
 const W = GAME.WIDTH;
 const H = GAME.HEIGHT;
@@ -199,11 +200,11 @@ export default class MenuScene extends Phaser.Scene {
       .setStrokeStyle(3, stroke).setDepth(3)
       .setInteractive({ useHandCursor: true });
     const lbl = this.add.text(x, y, label, txt(fontSize, '#ffffff')).setOrigin(0.5).setDepth(4);
-    btn.on('pointerover', () => { btn.setFillStyle(hover);
+    btn.on('pointerover', () => { btn.setFillStyle(hover); uiBlip(this);
       this.tweens.add({ targets: [btn, lbl], scaleX: 1.06, scaleY: 1.06, duration: 70 }); });
     btn.on('pointerout',  () => { btn.setFillStyle(fill);
       this.tweens.add({ targets: [btn, lbl], scaleX: 1, scaleY: 1, duration: 70 }); });
-    btn.on('pointerdown', onClick);
+    btn.on('pointerdown', () => { uiBlip(this, true); onClick(); });
     return { btn, lbl };
   }
 

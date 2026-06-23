@@ -17,6 +17,8 @@ export default class Enemy {
     this.key   = def.key;
     this.scale = def.scale;
     this._tint = def.tint ?? null;
+    this._ranged = def.ranged ?? false;
+    this._nextShot = 0;
 
     this._isChief = type === 'clown-boss';
     this._hpBarW  = this._isChief ? HP_BAR_W_BOSS : HP_BAR_W;
@@ -87,6 +89,7 @@ export default class Enemy {
   update(tx, ty) {
     if (this.isDead || !this.sprite?.active) return;
     if (this._isChief) { this._bossUpdate(tx, ty); return; }
+    if (this._ranged)  { this._rangedUpdate(tx, ty); return; }
 
     const k    = this.key;
     const dist = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, tx, ty);
@@ -112,6 +115,45 @@ export default class Enemy {
     }
 
     const sx = this.sprite.x, sy = this.sprite.y;
+    this.shadow.setPosition(sx, sy + this._halfH - 6);
+    const hpY = sy - this._halfH - 10;
+    this.hpBg.setPosition(sx, hpY);
+    this.hpBar.setPosition(sx - this._hpBarW / 2, hpY);
+  }
+
+  // Atirador: mantém distância (kiting) e dispara projéteis no jogador
+  _rangedUpdate(tx, ty) {
+    const now = this.scene.time.now;
+    const k   = this.key;
+    const sx  = this.sprite.x, sy = this.sprite.y;
+    const dist = Phaser.Math.Distance.Between(sx, sy, tx, ty);
+
+    const PREF = 280;   // distância preferida
+    const angle = Phaser.Math.Angle.Between(sx, sy, tx, ty);
+
+    if (dist > PREF + 40) {
+      // Longe → aproxima
+      this.sprite.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+    } else if (dist < PREF - 40) {
+      // Perto demais → recua (kiting)
+      this.sprite.setVelocity(-Math.cos(angle) * this.speed, -Math.sin(angle) * this.speed);
+    } else {
+      this.sprite.setVelocity(0, 0);
+    }
+    this.sprite.setFlipX(tx < sx);
+    if (!this.isHurt) {
+      const moving = this.sprite.body.velocity.lengthSq() > 4;
+      const want = moving ? `${k}-walk` : `${k}-idle`;
+      if (this.sprite.anims.currentAnim?.key !== want) this.sprite.play(want, true);
+    }
+
+    // Dispara em cooldown quando tem linha de visão (dist razoável)
+    if (now >= this._nextShot && dist < 460 && !this.isHurt) {
+      this._nextShot = now + 1900;
+      this.scene.spawnEnemyBullet?.(sx, sy, tx, ty);
+      this.sprite.play(`${k}-attack`, true);
+    }
+
     this.shadow.setPosition(sx, sy + this._halfH - 6);
     const hpY = sy - this._halfH - 10;
     this.hpBg.setPosition(sx, hpY);

@@ -140,10 +140,13 @@ export default class EnemyManager {
     const skinnyChance = Math.min(0.10 * (r - 1), 0.35);
     // Round 4+: tanque roxo (raro, fica mais comum no infinito)
     const tankChance   = r >= 4 ? Math.min(0.04 * (r - 3), 0.20) : 0;
+    // Round 3+: atirador verde (dispara à distância)
+    const shooterChance = r >= 3 ? Math.min(0.06 * (r - 2), 0.22) : 0;
 
-    if (roll < tankChance) return 'clown-tank';
-    if (roll < tankChance + fatChance) return 'clown-fat';
-    if (roll < tankChance + fatChance + skinnyChance) return 'clown-skinny';
+    if (roll < shooterChance) return 'clown-shooter';
+    if (roll < shooterChance + tankChance) return 'clown-tank';
+    if (roll < shooterChance + tankChance + fatChance) return 'clown-fat';
+    if (roll < shooterChance + tankChance + fatChance + skinnyChance) return 'clown-skinny';
     return 'clown';
   }
 
@@ -258,6 +261,7 @@ export default class EnemyManager {
           const len = Math.hypot(dx, dy) || 1;
           e.takeDamage(b._damage ?? BULLET.DAMAGE, { x: dx/len, y: dy/len });
           if (this.scene._stats) this.scene._stats.hits++;
+          this.scene.registerHit?.(); // combo sobe a cada acerto
           if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, e.points);
           b.destroy();
           break;

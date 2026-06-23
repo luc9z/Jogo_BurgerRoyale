@@ -573,6 +573,7 @@ export default class Player {
     if (hitEnemy) {
       hitEnemy.takeDamage(damage, { x: cos, y: sin });
       if (this.scene._stats) this.scene._stats.hits++;
+      this.scene.registerHit?.();
       if (hitEnemy.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, hitEnemy.points);
     }
   }

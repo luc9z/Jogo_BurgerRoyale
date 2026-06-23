@@ -101,6 +101,7 @@ export default class GameScene extends Phaser.Scene {
     this.hud     = new HUD(this);
     this.player  = new Player(this);
     this.enemies = new EnemyManager(this);
+    this._enemyBullets = this.physics.add.group({ allowGravity: false });
 
     this._escKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
 
@@ -116,17 +117,11 @@ export default class GameScene extends Phaser.Scene {
       }
     };
     const onKilled = pts => {
-      const now = this.time.now;
-      this._combo = (now <= this._comboUntil) ? this._combo + 1 : 1;
-      this._comboUntil = now + 2500; // janela p/ manter o combo
-      // Multiplicador cresce com o combo (cap 3x)
-      const mult = Math.min(1 + (this._combo - 1) * 0.1, 3);
-      this.score += Math.round(pts * mult);
+      // Pontos multiplicados pelo combo ATUAL (que sobe a cada acerto)
+      this.score += Math.round(pts * this._comboMult());
       this.events.emit('score-changed', this.score);
-      this.hud.setCombo(this._combo, mult);
       this.player.addKillProgress(); // 2 kills → recarrega 1 dash
       this._stats.kills++;
-      this._stats.bestCombo = Math.max(this._stats.bestCombo, this._combo);
     };
     const onDead = () => this._gameOver();
     // Salva progresso quando uma fase começa: desbloqueia + snapshot do
@@ -197,6 +192,7 @@ export default class GameScene extends Phaser.Scene {
     this.enemies.update(this.player.x, this.player.y);
     this.enemies.checkBulletHits(this.player.bullets.getChildren());
     this.enemies.applyContactDamage(this.player);
+    this._updateEnemyBullets();
     this.hud.update(this.player.ammo, this.enemies.aliveCount);
 
     this._checkPickups();
@@ -261,6 +257,18 @@ export default class GameScene extends Phaser.Scene {
       maxHearts:     this.player.maxHearts,
       currentWeapon: this.player.weaponKey,
     });
+  }
+
+  // Multiplicador do combo (cresce a cada acerto, teto 3x)
+  _comboMult() { return Math.min(1 + (this._combo - 1) * 0.1, 3); }
+
+  // Cada TIRO que acerta sobe o combo (não precisa matar)
+  registerHit() {
+    const now = this.time.now;
+    this._combo = (now <= this._comboUntil) ? this._combo + 1 : 1;
+    this._comboUntil = now + 2500; // janela p/ manter o combo
+    this._stats.bestCombo = Math.max(this._stats.bestCombo, this._combo);
+    this.hud.setCombo(this._combo, this._comboMult());
   }
 
   // Chamado pelo UpgradeScene antes de resumir
@@ -433,16 +441,58 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  // ── PROJÉTEIS INIMIGOS (atiradores) ─────────────────────
+  spawnEnemyBullet(x, y, tx, ty) {
+    if (this.isGameOver) return;
+    const ang = Phaser.Math.Angle.Between(x, y, tx, ty);
+    const SPD = 300;
+    const ox = x + Math.cos(ang) * 24, oy = y + Math.sin(ang) * 24;
+    const b = this._enemyBullets.create(ox, oy, 'enemy-bullet').setDepth(DEPTH.BULLET);
+    b.body.setAllowGravity(false);
+    b.body.setSize(10, 10, true);
+    b.setVelocity(Math.cos(ang) * SPD, Math.sin(ang) * SPD);
+    b._born = this.time.now;
+    // brilho pulsante
+    this.tweens.add({ targets: b, scaleX: 1.25, scaleY: 1.25, duration: 260, yoyo: true, repeat: -1 });
+  }
+
+  _updateEnemyBullets() {
+    const now = this.time.now;
+    for (const b of this._enemyBullets.getChildren()) {
+      if (!b.active) continue;
+      // Fora da arena ou velho demais → some
+      if (b.x < ARENA.X || b.x > ARENA.X + ARENA.W || b.y < ARENA.Y || b.y > ARENA.Y + ARENA.H || now - b._born > 4000) {
+        b.destroy(); continue;
+      }
+      // Acertou o jogador
+      if (!this.player.isDead &&
+          Phaser.Math.Distance.Between(b.x, b.y, this.player.x, this.player.y) < 22) {
+        this.player.takeDamage(1);
+        b.destroy();
+      }
+    }
+  }
+
   // ── TEXTURA DE BALA ─────────────────────────────────────
   _makeBulletTexture() {
-    if (this.textures.exists('bullet')) return;
-    const g = this.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(0xffe060, 1);
-    g.fillCircle(6, 6, 6);
-    g.fillStyle(0xffffff, 0.6);
-    g.fillCircle(4, 4, 2);
-    g.generateTexture('bullet', 12, 12);
-    g.destroy();
+    if (!this.textures.exists('bullet')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0xffe060, 1);
+      g.fillCircle(6, 6, 6);
+      g.fillStyle(0xffffff, 0.6);
+      g.fillCircle(4, 4, 2);
+      g.generateTexture('bullet', 12, 12);
+      g.destroy();
+    }
+    // Bala dos inimigos atiradores — roxa/magenta, distinta da do jogador
+    if (!this.textures.exists('enemy-bullet')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.5); g.fillCircle(7, 7, 7);
+      g.fillStyle(0xcc33ff, 1);   g.fillCircle(7, 7, 6);
+      g.fillStyle(0xff99ff, 0.9); g.fillCircle(5, 5, 2.5);
+      g.generateTexture('enemy-bullet', 14, 14);
+      g.destroy();
+    }
   }
 
   // ── ANIMAÇÕES ────────────────────────────────────────────

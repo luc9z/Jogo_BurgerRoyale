@@ -277,11 +277,15 @@ export default class Enemy {
     this.sprite.play(`${this.key}-hurt`, true);
 
     if (dir) {
-      this.scene.tweens.add({
+      // Empurrão escala com o dano e NÃO empilha (metralhadora dispara rápido
+      // → vários tweens sobrepostos jogavam o inimigo longe). Mata o anterior.
+      if (this._knockTween?.isPlaying()) this._knockTween.stop();
+      const kb = Phaser.Math.Clamp(amount * 0.18, 2, 12);
+      this._knockTween = this.scene.tweens.add({
         targets: this.sprite,
-        x: this.sprite.x + dir.x * 18,
-        y: this.sprite.y + dir.y * 18,
-        duration: 60, yoyo: true,
+        x: this.sprite.x + dir.x * kb,
+        y: this.sprite.y + dir.y * kb,
+        duration: 55, yoyo: true,
       });
     }
 

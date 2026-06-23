@@ -45,6 +45,9 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: SHEET.FRAME_W, frameHeight: SHEET.FRAME_H,
     });
     this.load.image('background', 'assets/sprites/background.png');
+    this.load.svg('wicon-pistol',     'assets/icons/pistol.svg',     { width: 56, height: 56 });
+    this.load.svg('wicon-shotgun',    'assets/icons/shotgun.svg',    { width: 56, height: 56 });
+    this.load.svg('wicon-machinegun', 'assets/icons/machinegun.svg', { width: 56, height: 56 });
   }
 
   create() {

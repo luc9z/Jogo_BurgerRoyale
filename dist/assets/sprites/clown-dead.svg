@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="90" height="55" viewBox="0 0 90 55">
+  <defs>
+    <linearGradient id="cskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#AEC79E"/><stop offset="1" stop-color="#6E8A62"/></linearGradient>
+    <linearGradient id="chair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0463A"/><stop offset="1" stop-color="#9A0E08"/></linearGradient>
+    <linearGradient id="csuit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E83828"/><stop offset="1" stop-color="#8E0A00"/></linearGradient>
+  </defs>
+  <ellipse cx="45" cy="48" rx="42" ry="6" fill="#000" opacity="0.25"/>
+  <g stroke="#1A2A14" stroke-width="0.7" stroke-linejoin="round">
+    <rect x="5" y="20" width="80" height="22" rx="9" fill="url(#csuit)"/>
+    <line x1="8" y1="31" x2="82" y2="31" stroke="#FFC72C" stroke-width="2" stroke-dasharray="5,3"/>
+    <circle cx="2" cy="26" r="5" fill="url(#chair)"/>
+    <ellipse cx="10" cy="24" rx="14" ry="6" fill="url(#chair)"/>
+    <ellipse cx="12" cy="31" rx="13" ry="12" fill="url(#cskin)"/>
+    <line x1="7" y1="26" x2="13" y2="32" stroke="#7A0000" stroke-width="2"/>
+    <line x1="13" y1="26" x2="7" y2="32" stroke="#7A0000" stroke-width="2"/>
+    <line x1="15" y1="26" x2="21" y2="32" stroke="#7A0000" stroke-width="2"/>
+    <line x1="21" y1="26" x2="15" y2="32" stroke="#7A0000" stroke-width="2"/>
+    <circle cx="14" cy="36" r="3.4" fill="#FF3020"/>
+    <ellipse cx="14" cy="44" rx="8" ry="3" fill="#5A8050" opacity="0.5" stroke="none"/>
+    <rect x="28" y="5" width="7" height="18" rx="3.5" fill="url(#cskin)" transform="rotate(-15,31,14)"/>
+    <rect x="45" y="3" width="7" height="18" rx="3.5" fill="url(#cskin)" transform="rotate(10,48,12)"/>
+    <rect x="62" y="6" width="7" height="16" rx="3.5" fill="url(#csuit)" transform="rotate(-12,65,14)"/>
+    <rect x="74" y="5" width="7" height="16" rx="3.5" fill="url(#csuit)" transform="rotate(18,77,13)"/>
+  </g>
+</svg>

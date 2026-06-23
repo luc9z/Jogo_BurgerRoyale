@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="70" height="90" viewBox="0 0 70 90">
+  <defs>
+    <linearGradient id="cskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#AEC79E"/><stop offset="1" stop-color="#6E8A62"/></linearGradient>
+    <linearGradient id="chair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F0463A"/><stop offset="1" stop-color="#9A0E08"/></linearGradient>
+    <linearGradient id="csuit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E83828"/><stop offset="1" stop-color="#8E0A00"/></linearGradient>
+    <radialGradient id="ceye" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FFE26A"/><stop offset="1" stop-color="#D89400"/></radialGradient>
+    <radialGradient id="cnose" cx="0.4" cy="0.35"><stop offset="0" stop-color="#FF6A5A"/><stop offset="1" stop-color="#C00800"/></radialGradient>
+  </defs>
+  <g stroke="#1A2A14" stroke-width="0.7" stroke-linejoin="round">
+    <rect x="20" y="34" width="26" height="28" rx="6" fill="url(#csuit)"/>
+    <circle cx="33" cy="42" r="2.6" fill="#FFC72C" stroke="#7A0A00" stroke-width="0.6"/>
+    <circle cx="33" cy="52" r="2.6" fill="#FFC72C" stroke="#7A0A00" stroke-width="0.6"/>
+    <rect x="29" y="28" width="8" height="8" rx="2" fill="url(#cskin)"/>
+    <circle cx="17" cy="13" r="6" fill="url(#chair)"/>
+    <circle cx="49" cy="13" r="6" fill="url(#chair)"/>
+    <ellipse cx="33" cy="19" rx="14" ry="13" fill="url(#cskin)"/>
+    <ellipse cx="33" cy="9" rx="16" ry="8" fill="url(#chair)"/>
+    <ellipse cx="27" cy="18" rx="4.4" ry="5.2" fill="url(#ceye)"/>
+    <ellipse cx="39" cy="18" rx="4.4" ry="5.2" fill="url(#ceye)"/>
+    <circle cx="27" cy="18" r="2.6" fill="#7A0000" stroke="none"/>
+    <circle cx="39" cy="18" r="2.6" fill="#7A0000" stroke="none"/>
+    <circle cx="27" cy="18" r="1.1" fill="#000" stroke="none"/>
+    <circle cx="39" cy="18" r="1.1" fill="#000" stroke="none"/>
+    <circle cx="33" cy="24" r="3.4" fill="url(#cnose)"/>
+    <path d="M21 28 Q33 40 45 28 Q33 33 21 28 Z" fill="#2A0604"/>
+    <rect x="25" y="29" width="3" height="5" rx="1" fill="#fff" stroke="#7A0A00" stroke-width="0.4"/>
+    <rect x="30" y="30" width="3" height="6" rx="1" fill="#fff" stroke="#7A0A00" stroke-width="0.4"/>
+    <rect x="36" y="29" width="3" height="5" rx="1" fill="#fff" stroke="#7A0A00" stroke-width="0.4"/>
+    <g transform="rotate(-70,11,34)">
+      <rect x="3" y="32" width="17" height="6" rx="3" fill="url(#csuit)"/>
+      <rect x="0" y="35" width="10" height="9" rx="4" fill="url(#cskin)"/>
+    </g>
+    <g transform="rotate(70,59,34)">
+      <rect x="46" y="32" width="17" height="6" rx="3" fill="url(#csuit)"/>
+      <rect x="55" y="35" width="10" height="9" rx="4" fill="url(#cskin)"/>
+    </g>
+    <g transform="rotate(-10,26,62)"><rect x="22" y="62" width="9" height="18" rx="4" fill="url(#csuit)"/><ellipse cx="25" cy="81" rx="8" ry="4" fill="#5A2A1A"/></g>
+    <g transform="rotate(10,39,62)"><rect x="35" y="62" width="9" height="18" rx="4" fill="url(#csuit)"/><ellipse cx="40" cy="81" rx="8" ry="4" fill="#5A2A1A"/></g>
+  </g>
+</svg>

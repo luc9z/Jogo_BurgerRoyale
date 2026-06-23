@@ -186,19 +186,6 @@ export default class GameScene extends Phaser.Scene {
 
     this._checkPickups();
 
-    // Cronômetro da rodada — só corre enquanto a wave não foi limpa.
-    // Zerou antes de limpar → tempo esgotado → game over.
-    if (!this._roundEnding) {
-      this._roundTimeLeft -= delta;
-      if (this._roundTimeLeft <= 0) {
-        this._roundTimeLeft = 0;
-        this.hud.setTimer(0);
-        this._gameOver();
-        return;
-      }
-      this.hud.setTimer(this._roundTimeLeft);
-    }
-
     if (!this._roundEnding && this.enemies.isRoundComplete()) {
       this._roundEnding = true;
       this.enemies.endRound();
@@ -222,7 +209,21 @@ export default class GameScene extends Phaser.Scene {
           currentWeapon: this.player.weaponKey,
         });
       });
+      return;
     }
+
+    // Cronômetro: só corre se a wave ainda não foi limpa (verificada acima).
+    // Zerou → tempo esgotado → game over por tempo.
+    this._roundTimeLeft -= delta;
+    if (this._roundTimeLeft <= 0) {
+      this._roundTimeLeft = 0;
+      this.hud.setTimer(0);
+      this.cameras.main.shake(260, 0.012);
+      this.cameras.main.flash(220, 120, 0, 0, false);
+      this._gameOver(true); // true = tempo esgotado
+      return;
+    }
+    this.hud.setTimer(this._roundTimeLeft);
   }
 
   // Chamado pelo UpgradeScene antes de resumir
@@ -462,7 +463,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // ── GAME OVER ────────────────────────────────────────────
-  _gameOver() {
+  _gameOver(timeUp = false) {
     if (this._goShown) return;
     this._goShown   = true;
     this.isGameOver = true;
@@ -485,8 +486,10 @@ export default class GameScene extends Phaser.Scene {
     this.time.delayedCall(450, () => {
       const ps = txt;
 
-      this.add.text(W/2, H/2-110, 'GAME OVER',               ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-64,  'Os palhaços venceram...', ps(FONT.BODY,'#ffaa00')).setOrigin(0.5).setDepth(D+1);
+      const subTxt = timeUp ? 'O TEMPO ACABOU!' : 'Os palhaços venceram...';
+      const subCol = timeUp ? '#ff3322' : '#ffaa00';
+      this.add.text(W/2, H/2-110, 'GAME OVER', ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-64,  subTxt,      ps(FONT.BODY, subCol)).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-36,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE,'#ffd740')).setOrigin(0.5).setDepth(D+1);
       this.add.text(W/2, H/2-8,   `Rounds: ${this.enemies.round}`, ps(FONT.BODY,'#ff8800')).setOrigin(0.5).setDepth(D+1);
       if (isNew) {

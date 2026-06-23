@@ -1,9 +1,9 @@
 export const GAME  = { WIDTH: 960, HEIGHT: 540 };
 
 export const ARENA = {
-  X: 40, Y: 70,
+  X: 24, Y: 50,
   get W() { return GAME.WIDTH  - this.X * 2; },
-  get H() { return GAME.HEIGHT - this.Y - 20; },
+  get H() { return GAME.HEIGHT - this.Y - 14; },
 };
 
 // SVG carregado em 180px de altura → scale 0.65 = 117px exibido (mesmo visual, 2x resolução)

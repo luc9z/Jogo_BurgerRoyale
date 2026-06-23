@@ -418,7 +418,10 @@ export default class GameScene extends Phaser.Scene {
     this.add.image(W/2, H/2, 'background').setDisplaySize(W, H).setDepth(DEPTH.BG);
     this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.25).setDepth(DEPTH.BG+1);
 
-    this.physics.world.setBounds(ARENA.X, ARENA.Y, ARENA.W, ARENA.H);
+    // Bounds físicos recuados da borda desenhada: o sprite do rei é maior
+    // que o corpo, então sem o recuo ele "vaza" para fora do mapa.
+    const PAD = 20;
+    this.physics.world.setBounds(ARENA.X + PAD, ARENA.Y + PAD, ARENA.W - PAD * 2, ARENA.H - PAD * 2);
 
     const g = this.add.graphics().setDepth(DEPTH.BORDER);
     g.lineStyle(4, COLOR.WALL, 0.9);

@@ -299,6 +299,8 @@ export default class Player {
 
   // ── DISPARO ──────────────────────────────────────────────
   _handleShoot() {
+    // Round terminou (transição p/ upgrade) → trava o tiro
+    if (this.scene._roundEnding) return;
     const pad    = this.scene.input.gamepad?.getPad(0);
     const gpFire = pad && (pad.buttons[7]?.pressed || pad.buttons[0]?.pressed);
     if (!this._mouseDown && !gpFire) return;

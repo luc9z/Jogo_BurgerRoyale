@@ -57,6 +57,15 @@ export default class GameScene extends Phaser.Scene {
 
     this.load.image('background', 'assets/sprites/background.png');
 
+    // Armas na mão do rei — SVG em 2× (viewBox altura 32, empunhadura em 14,18)
+    const wpns = {
+      pistol: 50, revolver: 54, shotgun: 62, burst: 58,
+      machinegun: 70, sniper: 80, doubleshotgun: 60, laser: 74,
+    };
+    for (const [k, w] of Object.entries(wpns)) {
+      this.load.svg(`wpn-${k}`, `assets/weapons/${k}.svg`, { width: w * 2, height: 64 });
+    }
+
     this.load.audio('sfx-shoot',        'assets/audio/shoot.mp3');
     this.load.audio('sfx-reload',       'assets/audio/reload.mp3');
     this.load.audio('sfx-player-hurt',  'assets/audio/player-hurt.mp3');

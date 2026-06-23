@@ -45,15 +45,6 @@ export default class PreloadScene extends Phaser.Scene {
       frameWidth: SHEET.FRAME_W, frameHeight: SHEET.FRAME_H,
     });
     this.load.image('background', 'assets/sprites/background.png');
-
-    // Armas na mão do rei — SVG rasterizado em 2× p/ nitidez (altura 32 no viewBox)
-    const wpns = {
-      pistol: 50, revolver: 54, shotgun: 62, burst: 58,
-      machinegun: 70, sniper: 80, doubleshotgun: 60, laser: 74,
-    };
-    for (const [k, w] of Object.entries(wpns)) {
-      this.load.svg(`wpn-${k}`, `assets/weapons/${k}.svg`, { width: w * 2, height: 64 });
-    }
   }
 
   create() {

@@ -28,6 +28,8 @@ export const ENEMY_TYPES = {
   clown:         { key: 'clown',        scale: 0.60,  hpMult: 1.0,  speedMult: 1.0,  pointsMult: 1.0  },
   'clown-fat':   { key: 'clown-fat',    scale: 0.75,  hpMult: 2.2,  speedMult: 0.62, pointsMult: 2.5  },
   'clown-skinny':{ key: 'clown-skinny', scale: 0.475, hpMult: 0.55, speedMult: 1.75, pointsMult: 1.8  },
+  // Tanque: palhaço roxo grande, lento e MUITO resistente (round 4+)
+  'clown-tank':  { key: 'clown-fat',    scale: 1.05,  hpMult: 4.2,  speedMult: 0.48, pointsMult: 5.0, tint: 0x9b6cff },
   'clown-boss':  { key: 'clown-fat',    scale: 1.65,  hpMult: 9.0,  speedMult: 0.42, pointsMult: 14.0 },
 };
 

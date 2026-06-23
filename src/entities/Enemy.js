@@ -15,6 +15,7 @@ export default class Enemy {
     this.type  = type;
     this.key   = def.key;
     this.scale = def.scale;
+    this._tint = def.tint ?? null;
 
     this._isChief = type === 'clown-boss';
     this._hpBarW  = this._isChief ? HP_BAR_W_BOSS : HP_BAR_W;
@@ -65,6 +66,7 @@ export default class Enemy {
     this.sprite.body.setAllowGravity(false);
 
     this.sprite.play(`${k}-idle`);
+    if (this._tint) this.sprite.setTint(this._tint);
 
     s.tweens.add({ targets: this.sprite, alpha: 1, duration: 280 });
 

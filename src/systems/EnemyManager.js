@@ -138,9 +138,12 @@ export default class EnemyManager {
     // Round 3+: introduce gordo
     const fatChance    = Math.min(0.05 * (r - 2), 0.30);
     const skinnyChance = Math.min(0.10 * (r - 1), 0.35);
+    // Round 4+: tanque roxo (raro, fica mais comum no infinito)
+    const tankChance   = r >= 4 ? Math.min(0.04 * (r - 3), 0.20) : 0;
 
-    if (roll < fatChance) return 'clown-fat';
-    if (roll < fatChance + skinnyChance) return 'clown-skinny';
+    if (roll < tankChance) return 'clown-tank';
+    if (roll < tankChance + fatChance) return 'clown-fat';
+    if (roll < tankChance + fatChance + skinnyChance) return 'clown-skinny';
     return 'clown';
   }
 

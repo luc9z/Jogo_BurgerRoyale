@@ -87,6 +87,8 @@ export default class GameScene extends Phaser.Scene {
     this._roundTimeLeft   = ROUND.TIME_MS;
     this._combo           = 0;
     this._comboUntil      = 0;
+    this._endless         = false;
+    this._voObjs          = []; // objetos da tela de vitória (p/ remover no CONTINUAR)
     this._gpStartPrev     = false;
 
     this._makeBulletTexture();
@@ -206,23 +208,13 @@ export default class GameScene extends Phaser.Scene {
       this.player.reloadFull();
 
       const cleared = this.enemies.round;
-      // Limpou a última fase → vitória (sem mais rounds)
-      if (cleared >= MAX_LEVELS) { this._victory(); return; }
+      // Limpou a última fase da campanha → tela de vitória (a menos que já
+      // esteja no modo infinito, onde os rounds continuam sem parar).
+      if (cleared >= MAX_LEVELS && !this._endless) { this._victory(); return; }
 
       this._pendingNextRound = true;
       this.hud.showRoundClear(cleared);
-
-      this.time.delayedCall(1800, () => {
-        if (this.isGameOver || this._paused) return;
-        this._paused = true;
-        this.scene.pause();
-        this.scene.launch('UpgradeScene', {
-          score:         this.score,
-          round:         this.enemies.round,
-          hearts:        this.player.hearts,
-          currentWeapon: this.player.weaponKey,
-        });
-      });
+      this.time.delayedCall(1800, () => this._launchUpgrade());
       return;
     }
 
@@ -238,6 +230,19 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     this.hud.setTimer(this._roundTimeLeft);
+  }
+
+  // Abre a loja de upgrades e pausa o jogo (entre rounds, inclusive no infinito)
+  _launchUpgrade() {
+    if (this.isGameOver || this._paused) return;
+    this._paused = true;
+    this.scene.pause();
+    this.scene.launch('UpgradeScene', {
+      score:         this.score,
+      round:         this.enemies.round,
+      hearts:        this.player.hearts,
+      currentWeapon: this.player.weaponKey,
+    });
   }
 
   // Chamado pelo UpgradeScene antes de resumir
@@ -617,7 +622,9 @@ export default class GameScene extends Phaser.Scene {
     const D = DEPTH.OVERLAY;
     const ps = txt;
 
+    this._voObjs = [];
     const ov = this.add.rectangle(W/2, H/2, W, H, 0x0a0500, 0).setDepth(D);
+    this._voObjs.push(ov);
     this.tweens.add({ targets: ov, fillAlpha: 0.9, duration: 700 });
 
     // Confete dourado caindo
@@ -628,6 +635,7 @@ export default class GameScene extends Phaser.Scene {
         Phaser.Math.Between(4, 8), Phaser.Math.Between(4, 8),
         cols[i % cols.length], 1,
       ).setDepth(D).setAngle(Phaser.Math.Between(0, 360));
+      this._voObjs.push(c);
       this.tweens.add({
         targets: c, y: H + 20, angle: c.angle + 360,
         duration: Phaser.Math.Between(2200, 4200), delay: Phaser.Math.Between(0, 1500),
@@ -637,22 +645,26 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.time.delayedCall(450, () => {
-      const title = this.add.text(W/2, H/2-104, 'VITÓRIA!', ps(FONT.HERO, '#ffd740'))
+      const title = this.add.text(W/2, H/2-118, 'VITÓRIA!', ps(FONT.HERO, '#ffd740'))
         .setOrigin(0.5).setDepth(D+1);
+      this._voObjs.push(title);
       this.tweens.add({ targets: title, scaleX: 1.06, scaleY: 1.06, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-      this.add.text(W/2, H/2-58, 'A Receita Sagrada está a salvo. O reino é seu, majestade!', ps(FONT.BODY, '#ffaa00')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-30, `Pontuação final: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE, '#ffd740')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-2,  `${MAX_LEVELS} fases concluídas`, ps(FONT.BODY, '#44ff88')).setOrigin(0.5).setDepth(D+1);
+      this._voObjs.push(
+        this.add.text(W/2, H/2-74, 'A Receita Sagrada está a salvo. O reino é seu, majestade!', ps(FONT.BODY, '#ffaa00')).setOrigin(0.5).setDepth(D+1),
+        this.add.text(W/2, H/2-48, `Pontuação final: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE, '#ffd740')).setOrigin(0.5).setDepth(D+1),
+        this.add.text(W/2, H/2-22, `${MAX_LEVELS} fases concluídas`, ps(FONT.BODY, '#44ff88')).setOrigin(0.5).setDepth(D+1),
+      );
       if (isNew) {
-        this.add.text(W/2, H/2+22, '✦ NOVO RECORDE! ✦', ps(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(D+1);
+        this._voObjs.push(this.add.text(W/2, H/2+2, '✦ NOVO RECORDE! ✦', ps(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(D+1));
       }
 
       const mkBtn = (y, label, col, onClick, idx) => {
-        const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
+        const btn = this.add.rectangle(W/2, y, 300, 38, 0x0c000f)
           .setStrokeStyle(2, col).setDepth(D+1)
           .setInteractive({ useHandCursor: true });
         const lbl = this.add.text(W/2, y, label, ps(FONT.BODY, '#ffffff')).setOrigin(0.5).setDepth(D+2);
+        this._voObjs.push(btn, lbl);
         btn.on('pointerover', () => {
           btn.setFillStyle(0x1a1400);
           this.tweens.add({ targets:[btn,lbl], scaleX:1.05, scaleY:1.05, duration:60 });
@@ -663,6 +675,7 @@ export default class GameScene extends Phaser.Scene {
         btn.on('pointerdown', onClick);
       };
 
+      const _vContinue = () => this._continueEndless();
       const _vRestart = () => {
         if (this._victoryMusic) this._victoryMusic.stop();
         if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
@@ -676,20 +689,48 @@ export default class GameScene extends Phaser.Scene {
         this.scene.start('MenuScene');
       };
 
-      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, _vRestart, 0);
-      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555,          _vMenu,    1);
+      mkBtn(H/2 + 36,  'CONTINUAR  ∞  (MODO INFINITO)', 0x00ccff,         _vContinue, 0);
+      mkBtn(H/2 + 86,  'JOGAR DE NOVO',                 COLOR.GOLD_LIGHT, _vRestart,  1);
+      mkBtn(H/2 + 136, 'MENU PRINCIPAL',                0x555555,         _vMenu,     2);
 
       // Gamepad navigation
       this._goGpIdx     = 0;
-      this._goGpActions = [_vRestart, _vMenu];
-      this._goBtnYs     = [H/2 + 90, H/2 + 144];
-      this._goBtnCols   = [COLOR.GOLD_LIGHT, 0x555555];
+      this._goGpActions = [_vContinue, _vRestart, _vMenu];
+      this._goBtnYs     = [H/2 + 36, H/2 + 86, H/2 + 136];
+      this._goBtnCols   = [0x00ccff, COLOR.GOLD_LIGHT, 0x555555];
       this._goGpPrevs   = { up: false, down: false, a: false };
       this._goGpEnabled = false;
       this._goSelector  = this.add.graphics().setDepth(D + 3);
+      this._voObjs.push(this._goSelector);
       this.time.delayedCall(300, () => { this._goGpEnabled = true; });
       this._drawGoSelector();
     });
+  }
+
+  // CONTINUAR ∞ — desmonta a tela de vitória e segue em rounds infinitos
+  _continueEndless() {
+    if (this._victoryMusic) this._victoryMusic.stop();
+    this._endless     = true;
+    this._goShown     = false;
+    this.isGameOver   = false;
+    this._goGpEnabled = false;
+    this._goGpActions = null;
+
+    // Remove todos os objetos da tela de vitória
+    for (const o of this._voObjs) { this.tweens.killTweensOf(o); if (o?.destroy) o.destroy(); }
+    this._voObjs = [];
+    this._goSelector = null;
+
+    this.physics.resume();
+    this.input.setDefaultCursor('none'); // volta o crosshair
+    // Retoma a trilha de fundo
+    this._music = new Music(this);
+    this._music.start();
+
+    // Vai direto pra loja e segue para o próximo round (6, 7, ...)
+    this._pendingNextRound = true;
+    this.hud.showRoundClear(this.enemies.round);
+    this.time.delayedCall(900, () => this._launchUpgrade());
   }
 
   // ── GAMEPAD NAV: telas de game over / vitória ────────────

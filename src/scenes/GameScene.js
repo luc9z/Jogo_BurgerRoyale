@@ -4,6 +4,7 @@ import {
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
+import Music        from '../systems/Music.js';
 import HUD          from '../ui/HUD.js';
 import { txt, FONT } from '../ui/text.js';
 import {
@@ -72,8 +73,6 @@ export default class GameScene extends Phaser.Scene {
     this.load.audio('sfx-player-death', 'assets/audio/player-death.mp3');
     this.load.audio('sfx-clown-hit',    'assets/audio/clown-hit.mp3');
     this.load.audio('sfx-clown-laugh',  'assets/audio/clown-laugh.mp3');
-    this.load.audio('bgm',              'assets/audio/background-music.mp3');
-    this.load.audio('victory-music',    'assets/audio/victory-music.mp3');
   }
 
   // ── CREATE ───────────────────────────────────────────────
@@ -146,7 +145,7 @@ export default class GameScene extends Phaser.Scene {
       this.events.off('round-changed', onRoundStart);
       this.events.off('drop-heal', this._onDropHeal);
       this.events.off('show-boss-warning', this._onBossWarning);
-      if (this._bgm) { this._bgm.stop(); this._bgm.destroy(); this._bgm = null; }
+      if (this._music) { this._music.stop(); this._music = null; }
     });
 
     // Começar numa fase liberada → restaura o estado salvo daquela fase
@@ -162,9 +161,9 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.startRound();
 
-    this.sound.stopByKey('bgm');
-    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.35 });
-    this._bgm.play();
+    // Trilha de fundo instrumental sintetizada (sem voz)
+    this._music = new Music(this);
+    this._music.start();
   }
 
   // ── UPDATE ───────────────────────────────────────────────
@@ -483,7 +482,7 @@ export default class GameScene extends Phaser.Scene {
     this._goShown   = true;
     this.isGameOver = true;
     this.physics.pause();
-    if (this._bgm) this._bgm.stop();
+    if (this._music) this._music.stop();
 
     // Restaura cursor (estava oculto pelo crosshair)
     this.input.setDefaultCursor('default');
@@ -599,7 +598,7 @@ export default class GameScene extends Phaser.Scene {
     this._goShown   = true;
     this.isGameOver = true;
     this.physics.pause();
-    if (this._bgm) this._bgm.stop();
+    if (this._music) this._music.stop();
     this.input.setDefaultCursor('default');
 
     markCompleted();

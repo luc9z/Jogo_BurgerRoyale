@@ -13,23 +13,24 @@ const ps = txt;
 // Preços-base ALTOS (o combo multiplica os pontos ganhos). Em _pickOptions o
 // custo ainda escala com o round (fica mais caro nas fases avançadas).
 const WEAPON_POOL = [
-  { key: 'revolver',      label: 'REVÓLVER',       tier: 1, line1: '62 dano · 6 tiros',     line2: 'preciso, longo alcance', cost: 650,  color: 0xeeaa44 },
-  { key: 'shotgun',       label: 'ESCOPETA',       tier: 2, line1: '24×6 · 7 tiros',        line2: 'devastador de perto',    cost: 850,  color: 0xff7a33 },
-  { key: 'burst',         label: 'BURST',          tier: 3, line1: '30×3 · 24 balas',       line2: 'rajada precisa de 3',    cost: 1100, color: 0xffaa00 },
-  { key: 'machinegun',    label: 'METRALHADORA',   tier: 4, line1: '16 dano · 40 balas',    line2: 'disparo contínuo',       cost: 1400, color: 0x44ffaa },
-  { key: 'sniper',        label: 'SNIPER',         tier: 5, line1: '210 dano · 5 tiros',    line2: 'alcance máximo, letal',  cost: 1750, color: 0x66bbff },
-  { key: 'doubleshotgun', label: 'ESCOPETA DUPLA', tier: 6, line1: '26×8 · 8 tiros',        line2: 'caos total de perto',    cost: 2150, color: 0xff5533 },
-  { key: 'laser',         label: 'LASER',          tier: 7, line1: '72 dano · instantâneo', line2: 'feixe que atravessa',    cost: 2600, color: 0x00ffee },
+  { key: 'revolver',      label: 'REVÓLVER',       tier: 1, line1: '62 dano · 6 tiros',     line2: 'preciso, longo alcance', cost: 1200, color: 0xeeaa44 },
+  { key: 'shotgun',       label: 'ESCOPETA',       tier: 2, line1: '24×6 · 7 tiros',        line2: 'devastador de perto',    cost: 1700, color: 0xff7a33 },
+  { key: 'burst',         label: 'BURST',          tier: 3, line1: '30×3 · 24 balas',       line2: 'rajada precisa de 3',    cost: 2300, color: 0xffaa00 },
+  { key: 'machinegun',    label: 'METRALHADORA',   tier: 4, line1: '16 dano · 40 balas',    line2: 'disparo contínuo',       cost: 3000, color: 0x44ffaa },
+  { key: 'sniper',        label: 'SNIPER',         tier: 5, line1: '210 dano · 5 tiros',    line2: 'alcance máximo, letal',  cost: 3800, color: 0x66bbff },
+  { key: 'doubleshotgun', label: 'ESCOPETA DUPLA', tier: 6, line1: '26×8 · 8 tiros',        line2: 'caos total de perto',    cost: 4700, color: 0xff5533 },
+  { key: 'laser',         label: 'LASER',          tier: 7, line1: '72 dano · instantâneo', line2: 'feixe que atravessa',    cost: 5800, color: 0x00ffee },
 ];
 
 // Bônus. `minRound` = só aparece a partir daquele round (melhorias melhores
 // surgem conforme a fase). Custo também escala com o round em _pickOptions.
+// Preços altos: você compra 1 carta por round, então cada compra deve pesar.
 const BONUS_POOL = [
-  { key: 'heal',   label: 'CURAR',       line1: 'recupera 1 coração',     line2: '',                    cost: 450,  color: 0xff2244, minRound: 1 },
-  { key: 'speed',  label: 'ADRENALINA',  line1: '+25 velocidade',         line2: 'permanente',          cost: 550,  color: 0xffd740, minRound: 1 },
-  { key: 'reload', label: 'RECARGA+',    line1: '-25% tempo de recarga',  line2: 'permanente',          cost: 650,  color: 0x88ffcc, minRound: 2 },
-  { key: 'damage', label: 'DANO+',       line1: '+25% dano em tudo',      line2: 'permanente, empilha', cost: 900,  color: 0xff8800, minRound: 2 },
-  { key: 'maxhp',  label: 'VIDA EXTRA',  line1: '+1 coração máximo',      line2: 'e enche a vida',      cost: 1300, color: 0xff5588, minRound: 3 },
+  { key: 'heal',   label: 'CURAR',       line1: 'recupera 1 coração',     line2: '',                    cost: 800,  color: 0xff2244, minRound: 1 },
+  { key: 'speed',  label: 'ADRENALINA',  line1: '+25 velocidade',         line2: 'permanente, empilha', cost: 1100, color: 0xffd740, minRound: 1 },
+  { key: 'reload', label: 'RECARGA+',    line1: '-20% tempo de recarga',  line2: 'permanente, empilha', cost: 1400, color: 0x88ffcc, minRound: 1 },
+  { key: 'damage', label: 'DANO+',       line1: '+25% dano em tudo',      line2: 'permanente, empilha', cost: 1900, color: 0xff8800, minRound: 2 },
+  { key: 'maxhp',  label: 'VIDA EXTRA',  line1: '+1 coração máximo',      line2: 'e enche a vida',      cost: 2800, color: 0xff5588, minRound: 2 },
 ];
 
 const ICON_KEYS = ['pistol', 'revolver', 'shotgun', 'burst', 'machinegun', 'sniper', 'doubleshotgun', 'laser'];

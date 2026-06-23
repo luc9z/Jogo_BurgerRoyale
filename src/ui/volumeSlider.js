@@ -58,11 +58,19 @@ export function makeVolumeSlider(scene, x, y, w, opts = {}) {
 
   const fromPointer = (px) => apply((px - x0) / w);
 
-  // Zona de clique/arrasto (mais alta que o trilho, fácil de acertar)
-  const zone = scene.add.zone(x0 + w / 2, y, w + 16, 30)
-    .setOrigin(0.5).setDepth(depth).setInteractive({ useHandCursor: true, draggable: true });
-  zone.on('pointerdown', (p) => { fromPointer(p.x); uiBlip(scene); });
-  zone.on('drag', (p) => fromPointer(p.x));
+  // Área de clique/arrasto: retângulo transparente (mais confiável que zone).
+  let dragging = false;
+  const hit = scene.add.rectangle(x0 + w / 2, y, w + 22, 32, 0xffffff, 0.001)
+    .setDepth(depth).setInteractive({ useHandCursor: true });
+  hit.on('pointerdown', (p) => { dragging = true; fromPointer(p.x); uiBlip(scene); });
+  const onMove = (p) => { if (dragging && p.isDown) fromPointer(p.x); };
+  const onUp   = () => { dragging = false; };
+  scene.input.on('pointermove', onMove);
+  scene.input.on('pointerup', onUp);
+  scene.events.once('shutdown', () => {
+    scene.input.off('pointermove', onMove);
+    scene.input.off('pointerup', onUp);
+  });
 
   spk.on('pointerdown', () => {
     scene.sound.mute = !scene.sound.mute;
@@ -73,7 +81,7 @@ export function makeVolumeSlider(scene, x, y, w, opts = {}) {
   });
 
   draw();
-  return { draw, destroy: () => { g.destroy(); label.destroy(); pctTxt.destroy(); spk.destroy(); zone.destroy(); } };
+  return { draw, destroy: () => { g.destroy(); label.destroy(); pctTxt.destroy(); spk.destroy(); hit.destroy(); } };
 }
 
 // Lê e aplica o volume/mudo salvos (chamar no boot, ex.: MenuScene)

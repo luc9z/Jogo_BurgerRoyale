@@ -646,9 +646,9 @@ export default class Player {
   }
 
   // ── BÔNUS DE UPGRADES ────────────────────────────────────
-  addSpeedBonus(amount)  { this._speedBonus = Math.min(this._speedBonus + amount, 120); }
-  addDamageBonus(pct)    { this._damageMult = Math.min(this._damageMult + pct, 3.0); }
-  addReloadBonus(pct)    { this._reloadMult = Math.max(this._reloadMult - pct, 0.30); }
+  addSpeedBonus(amount)  { this._speedBonus = Math.min(this._speedBonus + amount, 300); }
+  addDamageBonus(pct)    { this._damageMult = Math.min(this._damageMult + pct, 8.0); }
+  addReloadBonus(pct)    { this._reloadMult = Math.max(this._reloadMult - pct, 0.15); }
 
   // ── DANO ──────────────────────────────────────────────────
   takeDamage(hearts = 1) {

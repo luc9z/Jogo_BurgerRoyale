@@ -58,11 +58,9 @@ export default class PauseScene extends Phaser.Scene {
     this._makeBtn(W/2, H/2 + 34,  'REINICIAR',      0xff8800, '#ff8800', () => this._restart());
     this._makeBtn(W/2, H/2 + 90,  'MENU PRINCIPAL', 0xcc1100, '#cc1100', () => this._toMenu());
 
-    // Controle de volume (slider horizontal clicável)
-    makeVolumeSlider(this, W/2 - 30, H/2 + 132, 110, {
-      depth: 2,
-      onChange: () => this.scene.get('GameScene')?._music?.refreshVolume(),
-    });
+    // Controle de volume (slider horizontal clicável). O bgm (mp3) usa o
+    // volume master do Phaser, então muda ao vivo sem callback extra.
+    makeVolumeSlider(this, W/2 - 30, H/2 + 132, 110, { depth: 2 });
 
     // Dica ESC
     this.add.text(W/2, H/2 + 166, 'ESC — continuar', ps(FONT.BODY, '#ffffff44'))
@@ -100,7 +98,8 @@ export default class PauseScene extends Phaser.Scene {
   _restart() {
     this.scene.stop();
     this.scene.stop('GameScene');
-    this.scene.start('GameScene');
+    // Reinicia na fase atual (carrega o estado de entrada daquela fase)
+    this.scene.start('GameScene', { startLevel: this.gameRound });
   }
 
   _toMenu() {

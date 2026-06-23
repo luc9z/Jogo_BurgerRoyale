@@ -4,7 +4,6 @@ import {
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
-import Music        from '../systems/Music.js';
 import { roundHorn, heartbeat } from '../systems/Sfx.js';
 import HUD          from '../ui/HUD.js';
 import { txt, FONT } from '../ui/text.js';
@@ -74,6 +73,7 @@ export default class GameScene extends Phaser.Scene {
     this.load.audio('sfx-player-death', 'assets/audio/player-death.mp3');
     this.load.audio('sfx-clown-hit',    'assets/audio/clown-hit.mp3');
     this.load.audio('sfx-clown-laugh',  'assets/audio/clown-laugh.mp3');
+    this.load.audio('bgm',              'assets/audio/background-music.mp3');
   }
 
   // ── CREATE ───────────────────────────────────────────────
@@ -147,7 +147,7 @@ export default class GameScene extends Phaser.Scene {
       this.events.off('round-changed', onRoundStart);
       this.events.off('drop-heal', this._onDropHeal);
       this.events.off('show-boss-warning', this._onBossWarning);
-      if (this._music) { this._music.stop(); this._music = null; }
+      if (this._bgm) { this._bgm.stop(); this._bgm.destroy(); this._bgm = null; }
     });
 
     // Começar numa fase liberada → restaura o estado salvo daquela fase
@@ -163,9 +163,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.startRound();
 
-    // Trilha de fundo instrumental sintetizada (sem voz)
-    this._music = new Music(this);
-    this._music.start();
+    // Música de fundo original (mp3). O volume master do Phaser (slider) a controla.
+    this.sound.stopByKey('bgm');
+    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
+    this._bgm.play();
   }
 
   // ── UPDATE ───────────────────────────────────────────────
@@ -278,7 +279,7 @@ export default class GameScene extends Phaser.Scene {
       case 'heal':   this.player.heal(); break;
       case 'speed':  this.player.addSpeedBonus(25); break;
       case 'damage': this.player.addDamageBonus(0.25); break;
-      case 'reload': this.player.addReloadBonus(0.25); break;
+      case 'reload': this.player.addReloadBonus(0.20); break;
       case 'maxhp':  this.player.addMaxHeart(); break;
       default:
         if (upgrade.key in WEAPONS) this.player.changeWeapon(upgrade.key);
@@ -556,7 +557,7 @@ export default class GameScene extends Phaser.Scene {
     this._goShown   = true;
     this.isGameOver = true;
     this.physics.pause();
-    if (this._music) this._music.stop();
+    if (this._bgm) this._bgm.stop();
 
     // Restaura cursor (estava oculto pelo crosshair)
     this.input.setDefaultCursor('default');
@@ -608,7 +609,8 @@ export default class GameScene extends Phaser.Scene {
       const _goRestart = () => {
         if (this.scene.isActive('UpgradeScene')) this.scene.stop('UpgradeScene');
         if (this.scene.isActive('PauseScene')) this.scene.stop('PauseScene');
-        this.scene.start('GameScene');
+        // Volta para a FASE em que morreu (fase 1 se não passou da 1ª)
+        this.scene.start('GameScene', { startLevel: this.enemies.round });
       };
       const _goMenu = () => {
         this.scene.stop('UpgradeScene');
@@ -677,7 +679,7 @@ export default class GameScene extends Phaser.Scene {
     this._goShown   = true;
     this.isGameOver = true;
     this.physics.pause();
-    if (this._music) this._music.stop();
+    if (this._bgm) this._bgm.stop();
     this.input.setDefaultCursor('default');
 
     markCompleted();
@@ -798,8 +800,9 @@ export default class GameScene extends Phaser.Scene {
     this.physics.resume();
     this.input.setDefaultCursor('none'); // volta o crosshair
     // Retoma a trilha de fundo
-    this._music = new Music(this);
-    this._music.start();
+    this.sound.stopByKey('bgm');
+    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
+    this._bgm.play();
 
     // Vai direto pra loja e segue para o próximo round (6, 7, ...)
     this._pendingNextRound = true;

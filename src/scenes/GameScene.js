@@ -140,7 +140,7 @@ export default class GameScene extends Phaser.Scene {
     this.enemies.startRound();
 
     this.sound.stopByKey('bgm');
-    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.4 });
+    this._bgm = this.sound.add('bgm', { loop: true, volume: 0.35 });
     this._bgm.play();
   }
 
@@ -473,7 +473,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Música de vitória (arquivo). Fallback para a fanfarra sintetizada.
     if (this.cache.audio.exists('victory-music')) {
-      this._victoryMusic = this.sound.add('victory-music', { volume: 0.6 });
+      this._victoryMusic = this.sound.add('victory-music', { volume: 0.55 });
       this._victoryMusic.play();
     } else {
       this._playVictoryFanfare();

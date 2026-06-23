@@ -206,7 +206,7 @@ export default class Enemy {
       this.hpBar.fillColor = pct > 0.5 ? 0x22cc44 : pct > 0.25 ? 0xff8800 : 0xff2200;
     }
 
-    this.scene.sound.play('sfx-clown-hit', { volume: 0.25 });
+    this.scene.sound.play('sfx-clown-hit', { volume: 0.30 });
 
     // Boss: transições de fase
     if (this._isChief) {
@@ -278,7 +278,7 @@ export default class Enemy {
     this.sprite.setVelocity(0, 0);
     this.sprite.play(`${this.key}-death`, true);
     this.scene.sound.play('sfx-clown-laugh', {
-      volume: 0.45,
+      volume: 0.42,
       detune: Phaser.Math.Between(-150, 150),
     });
 

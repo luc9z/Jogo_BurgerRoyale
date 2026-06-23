@@ -9,7 +9,6 @@ const SKIN = 'king-default';
 const GUN_SCALE = 0.4;   // SVG carregado em 2× → 0.4 = ~0.8 do tamanho nativo
 const HAND_OFF  = 6;     // grip à frente do centro do rei, na direção da mira
 const WEAPON_ART = {
-  knife:        { w: 44, tip: 0,  melee: true },
   pistol:       { w: 50, tip: 27 },
   revolver:     { w: 54, tip: 30 },
   shotgun:      { w: 62, tip: 38 },
@@ -293,7 +292,7 @@ export default class Player {
 
     this.ammo--;
     this.scene.events.emit('ammo-changed', this.ammo);
-    this.scene.sound.play('sfx-shoot', { volume: 0.18 });
+    this.scene.sound.play('sfx-shoot', { volume: 0.22 });
 
     const baseAngle = Math.atan2(this.lastDir.y, this.lastDir.x);
     const w = this.weaponDef;
@@ -404,7 +403,7 @@ export default class Player {
     this.isReloading = true;
     this.canShoot    = false;
     this.scene.events.emit('reload-start');
-    this.scene.sound.play('sfx-reload', { volume: 0.55 });
+    this.scene.sound.play('sfx-reload', { volume: 0.40 });
 
     const id = ++this._reloadId;
     const reloadMs = Math.round(this.weaponDef.reloadMs * this._reloadMult);
@@ -458,7 +457,7 @@ export default class Player {
 
     this.scene.cameras.main.flash(90, 200, 0, 0, false);
     this.scene.cameras.main.shake(200, 0.009);
-    this.scene.sound.play('sfx-player-hurt', { volume: 0.65 });
+    this.scene.sound.play('sfx-player-hurt', { volume: 0.55 });
 
     // Pisca de invencibilidade (alpha) — não tinge o sprite de vermelho,
     // o que ficava feio sobre os gradientes do SVG.
@@ -516,7 +515,7 @@ export default class Player {
     this._stopHurtBlink();
     this.sprite.setVelocity(0, 0);
     this.sprite.play(`${SKIN}-death`, true);
-    this.scene.sound.play('sfx-player-death', { volume: 0.7 });
+    this.scene.sound.play('sfx-player-death', { volume: 0.60 });
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.scene.time.delayedCall(300, () => this.scene.events.emit(EVT.PLAYER_DEAD));
     });

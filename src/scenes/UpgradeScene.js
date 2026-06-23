@@ -27,7 +27,7 @@ const BONUS_POOL = [
   { key: 'reload', label: 'RECARGA+',   line1: '-25% tempo de recarga', line2: 'permanente',          cost: 420, color: 0x88ffcc },
 ];
 
-const ICON_KEYS = ['pistol', 'revolver', 'shotgun', 'burst', 'machinegun', 'sniper', 'doubleshotgun', 'laser', 'knife'];
+const ICON_KEYS = ['pistol', 'revolver', 'shotgun', 'burst', 'machinegun', 'sniper', 'doubleshotgun', 'laser'];
 
 export default class UpgradeScene extends Phaser.Scene {
   constructor() { super('UpgradeScene'); }

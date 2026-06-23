@@ -38,7 +38,6 @@ export const ROUND  = { WARN_MS: 3500, SPAWN_MS: 480, BASE_COUNT: 6, PER_ROUND: 
 // tier = posição na escada de evolução. Upgrades só oferecem armas de tier
 // MAIOR que a equipada — nunca repete nem rebaixa (pistola→revólver→...→laser).
 export const WEAPONS = {
-  knife:        { name: 'FACA',           tier: 0, damage: 55,  bulletSpeed: 0,    clipSize: -1, shootCd: 380, reloadMs: 0,    spread: 0,    pellets: 0, range: 82,   isMelee: true  },
   pistol:       { name: 'PISTOLA',        tier: 0, damage: 26,  bulletSpeed: 560,  clipSize: 12, shootCd: 260, reloadMs: 1500, spread: 0,    pellets: 1, range: 640,  isMelee: false },
   revolver:     { name: 'REVÓLVER',       tier: 1, damage: 62,  bulletSpeed: 760,  clipSize: 6,  shootCd: 340, reloadMs: 1500, spread: 0.01, pellets: 1, range: 920,  isMelee: false },
   shotgun:      { name: 'ESCOPETA',       tier: 2, damage: 24,  bulletSpeed: 480,  clipSize: 7,  shootCd: 600, reloadMs: 1900, spread: 0.30, pellets: 6, range: 240,  isMelee: false },

@@ -22,6 +22,18 @@ const WEAPON_POOL = [
   { key: 'laser',         label: 'LASER',          tier: 7, line1: '72 dano · instantâneo', line2: 'feixe que atravessa',    cost: 5800, color: 0x00ffee },
 ];
 
+// Raridade da caixa misteriosa — quanto MAIS raro, MENOR o peso (mais difícil
+// sair). Cor por raridade (estilo CS:GO). weight = chance relativa.
+const RARITY = {
+  revolver:      { name: 'COMUM',    weight: 100, col: 0xb0b0b0 },
+  shotgun:       { name: 'INCOMUM',  weight: 60,  col: 0x4a90d9 },
+  burst:         { name: 'RARO',     weight: 34,  col: 0x9b59ff },
+  machinegun:    { name: 'ÉPICO',    weight: 18,  col: 0xd04ad0 },
+  sniper:        { name: 'LENDÁRIO', weight: 9,   col: 0xff8800 },
+  doubleshotgun: { name: 'MÍTICO',   weight: 4,   col: 0xff3344 },
+  laser:         { name: 'SECRETO',  weight: 1.5, col: 0xffd740 },
+};
+
 // Bônus. `minRound` = só aparece a partir daquele round (melhorias melhores
 // surgem conforme a fase). Custo também escala com o round em _pickOptions.
 // Preços altos: você compra 1 carta por round, então cada compra deve pesar.
@@ -429,12 +441,21 @@ export default class UpgradeScene extends Phaser.Scene {
     const curTier = WEAPONS[this._data?.currentWeapon ?? 'pistol']?.tier ?? 0;
     let list = WEAPON_POOL.filter(w => w.tier > curTier);
     if (!list.length) list = WEAPON_POOL.slice();
-    // Peso: tier menor é mais comum, laser é raro (emoção do "drop")
-    const weights = list.map(w => Math.max(2, 32 - w.tier * 4));
+    // Peso = raridade: comum sai fácil, secreto (laser) é muito raro
+    const weights = list.map(w => RARITY[w.key]?.weight ?? 10);
     const total = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < list.length; i++) { r -= weights[i]; if (r <= 0) return list[i]; }
     return list[list.length - 1];
+  }
+
+  // Arma aleatória ponderada por raridade (preenche a fita visualmente)
+  _randWeapon() {
+    const weights = WEAPON_POOL.map(w => RARITY[w.key]?.weight ?? 10);
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < WEAPON_POOL.length; i++) { r -= weights[i]; if (r <= 0) return WEAPON_POOL[i]; }
+    return WEAPON_POOL[0];
   }
 
   _openBox() {
@@ -446,18 +467,20 @@ export default class UpgradeScene extends Phaser.Scene {
     this.add.text(W / 2, 70, 'ABRINDO CAIXA MISTERIOSA', ps(FONT.TITLE, '#00ccff'))
       .setOrigin(0.5).setDepth(D + 3);
 
-    // Reel horizontal de armas
+    // Reel horizontal de armas — cores e faixa por RARIDADE (estilo CS:GO)
     const CARD_W = 96, WIN = 38, COUNT = WIN + 6;
     const reelY  = H / 2;
     const reel   = this.add.container(0, reelY).setDepth(D + 1);
 
     for (let i = 0; i < COUNT; i++) {
-      const def = (i === WIN) ? winner : Phaser.Utils.Array.GetRandom(WEAPON_POOL);
+      const def  = (i === WIN) ? winner : this._randWeapon();
+      const rar  = RARITY[def.key] ?? { col: def.color };
       const x = i * CARD_W;
-      const card = this.add.rectangle(x, 0, CARD_W - 10, 110, 0x0c0016).setStrokeStyle(2, def.color);
-      const icon = this.add.image(x, -10, `wicon-${def.key}`).setDisplaySize(54, 54).setTint(def.color);
-      const name = this.add.text(x, 38, def.label, ps(FONT.BODY, '#cccccc')).setOrigin(0.5);
-      reel.add([card, icon, name]);
+      const card = this.add.rectangle(x, 0, CARD_W - 10, 110, 0x0c0016).setStrokeStyle(2, rar.col);
+      const strip = this.add.rectangle(x, 48, CARD_W - 10, 6, rar.col); // faixa de raridade na base
+      const icon = this.add.image(x, -12, `wicon-${def.key}`).setDisplaySize(52, 52).setTint(rar.col);
+      const name = this.add.text(x, 30, def.label, ps(FONT.BODY, '#cccccc')).setOrigin(0.5);
+      reel.add([card, strip, icon, name]);
     }
 
     // Marcador central (ponteiro)
@@ -468,9 +491,9 @@ export default class UpgradeScene extends Phaser.Scene {
     mark.lineStyle(2, 0xffd740, 0.5);
     mark.lineBetween(W / 2, reelY - 60, W / 2, reelY + 60);
 
-    // Posições: card WIN deve parar sob o centro
-    const startX = W / 2 - CARD_W / 2;                 // card 0 centralizado
-    const finalX = W / 2 - (WIN * CARD_W + CARD_W / 2); // card WIN centralizado
+    // Posições: o CENTRO do card WIN para sob o ponteiro (centro = i*CARD_W).
+    const startX = W / 2;                 // card 0 sob o centro no início
+    const finalX = W / 2 - WIN * CARD_W;  // card WIN sob o centro no fim
     reel.x = startX;
 
     // Ticks que desaceleram (sensação de roleta)
@@ -496,15 +519,18 @@ export default class UpgradeScene extends Phaser.Scene {
     this.tweens.add({ targets: [reel, mark], alpha: 0, duration: 300 });
 
     const cx = W / 2, cy = H / 2 - 10;
+    const rar = RARITY[winner.key] ?? { name: '', col: winner.color };
+    const col = rar.col;
+    const colHex = '#' + col.toString(16).padStart(6, '0');
 
     // Flash branco
     const flash = this.add.rectangle(W/2, H/2, W, H, 0xffffff, 0).setDepth(D + 4);
     this.tweens.add({ targets: flash, alpha: 0.55, duration: 90, yoyo: true,
       onComplete: () => flash.destroy() });
 
-    // Raios de luz girando atrás
+    // Raios de luz girando atrás (cor da raridade)
     const rays = this.add.graphics().setDepth(D + 4).setBlendMode(Phaser.BlendModes.SCREEN);
-    rays.fillStyle(winner.color, 0.22);
+    rays.fillStyle(col, 0.22);
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
       rays.slice(cx, cy, 460, a - 0.13, a + 0.13, false); rays.fillPath();
@@ -515,29 +541,30 @@ export default class UpgradeScene extends Phaser.Scene {
 
     // Halo circular
     const halo = this.add.graphics().setDepth(D + 5).setBlendMode(Phaser.BlendModes.SCREEN);
-    halo.fillStyle(winner.color, 0.30); halo.fillCircle(cx, cy, 92);
+    halo.fillStyle(col, 0.30); halo.fillCircle(cx, cy, 92);
     halo.setScale(0.3).setAlpha(0);
     this.tweens.add({ targets: halo, alpha: 1, scale: 1, duration: 380, ease: 'Back.easeOut' });
 
     // Ícone GIGANTE da arma — zoom de pequeno a grande
     const icon = this.add.image(cx, cy, `wicon-${winner.key}`)
-      .setDisplaySize(36, 36).setTint(winner.color).setDepth(D + 6).setAlpha(0);
+      .setDisplaySize(36, 36).setTint(col).setDepth(D + 6).setAlpha(0);
     this.tweens.add({
       targets: icon, alpha: 1, displayWidth: 150, displayHeight: 150,
       duration: 520, ease: 'Back.easeOut',
       onComplete: () => {
-        // leve "respiração"
         this.tweens.add({ targets: icon, displayWidth: 160, displayHeight: 160,
           duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       },
     });
 
-    // Texto: nome da arma + "VOCÊ GANHOU"
-    const got = this.add.text(cx, cy - 110, 'VOCÊ GANHOU', ps(FONT.BODY, '#aaeeff'))
-      .setOrigin(0.5).setDepth(D + 6).setAlpha(0);
-    const name = this.add.text(cx, cy + 96, winner.label, ps(FONT.TITLE, '#ffd740'))
+    // Selo de RARIDADE (cor da raridade)
+    const rarTxt = this.add.text(cx, cy - 108, rar.name, ps(FONT.VALUE, colHex))
       .setOrigin(0.5).setDepth(D + 6).setAlpha(0).setScale(0.6);
-    this.tweens.add({ targets: got, alpha: 1, duration: 300, delay: 250 });
+    this.tweens.add({ targets: rarTxt, alpha: 1, scale: 1, duration: 360, delay: 180, ease: 'Back.easeOut' });
+
+    // Nome da arma
+    const name = this.add.text(cx, cy + 96, winner.label, ps(FONT.TITLE, colHex))
+      .setOrigin(0.5).setDepth(D + 6).setAlpha(0).setScale(0.6);
     this.tweens.add({ targets: name, alpha: 1, scale: 1, duration: 420, delay: 350, ease: 'Back.easeOut' });
 
     // Stats da arma

@@ -22,16 +22,16 @@ const WEAPON_ART = {
 
 // Tiro sintetizado por arma (WebAudio). crack = ruído filtrado, body = thump
 // grave. gain/dur/cut/body variam p/ dar identidade sonora a cada arma.
-// cut = brilho do corpo (alto = menos abafado). snap = estalo agudo (highpass)
-// que tira o "abafado" e dá ataque seco. body = thump grave de peso.
+// Usa o shoot.mp3 (nítido) com pitch (rate) e volume por arma.
+// rate < 1 = mais grave/pesado, rate > 1 = mais agudo/rápido.
 const SHOT = {
-  pistol:        { gain: 0.34, dur: 0.09, cut: 5500, body: 240, bodyDur: 0.06, snap: 0.34 },
-  revolver:      { gain: 0.38, dur: 0.18, cut: 4200, body: 100, bodyDur: 0.18, snap: 0.40 },
-  shotgun:       { gain: 0.40, dur: 0.24, cut: 3600, body: 75,  bodyDur: 0.22, snap: 0.46 },
-  burst:         { gain: 0.22, dur: 0.06, cut: 7000, body: 300, bodyDur: 0.04, snap: 0.26 },
-  machinegun:    { gain: 0.18, dur: 0.05, cut: 6000, body: 220, bodyDur: 0.03, snap: 0.22 },
-  sniper:        { gain: 0.44, dur: 0.28, cut: 4000, body: 68,  bodyDur: 0.24, snap: 0.52 },
-  doubleshotgun: { gain: 0.44, dur: 0.26, cut: 3400, body: 62,  bodyDur: 0.24, snap: 0.50 },
+  pistol:        { rate: 1.00, vol: 0.55 },
+  revolver:      { rate: 0.82, vol: 0.65 }, // mais grave, encorpado
+  shotgun:       { rate: 0.68, vol: 0.70 }, // boom grave
+  burst:         { rate: 1.28, vol: 0.42 }, // agudo, rápido
+  machinegun:    { rate: 1.15, vol: 0.34 }, // seco (dispara em spam)
+  sniper:        { rate: 0.60, vol: 0.75 }, // estouro grave pesado
+  doubleshotgun: { rate: 0.64, vol: 0.72 }, // o mais grave
 };
 
 export default class Player {
@@ -332,81 +332,35 @@ export default class Player {
     if (this.ammo <= 0) this._startReload();
   }
 
-  // Tiro sintetizado — som diferente por arma, sem precisar de arquivos
+  // Tiro: usa o shoot.mp3 (gravação nítida) variando pitch (rate) e volume
+  // por arma — assim cada arma soa diferente sem ficar abafado.
   _playShot() {
-    const mgr = this.scene.sound;
-    const ctx = mgr?.context;
-    // Fallback: navegador sem WebAudio → mp3 genérico
-    if (!ctx || ctx.state === 'closed') {
-      this.scene.sound.play('sfx-shoot', { volume: 0.22 });
-      return;
-    }
-    if (mgr.mute) return;
-    if (ctx.state === 'suspended') ctx.resume();
-
-    const now    = ctx.currentTime;
-    const master = ctx.createGain();
-    master.gain.value = mgr.volume ?? 1;
-    master.connect(ctx.destination);
-
+    // Laser: zap sintetizado (arma de energia, não é tiro de pólvora)
     if (this.weaponKey === 'laser') {
-      // Zap sci-fi: tom descendente
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sawtooth';
-      o.frequency.setValueAtTime(1300, now);
-      o.frequency.exponentialRampToValueAtTime(170, now + 0.18);
-      g.gain.setValueAtTime(0.0001, now);
-      g.gain.linearRampToValueAtTime(0.18, now + 0.008);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
-      o.connect(g); g.connect(master);
-      o.start(now); o.stop(now + 0.22);
-      return;
+      const mgr = this.scene.sound;
+      const ctx = mgr?.context;
+      if (ctx && ctx.state !== 'closed' && !mgr.mute) {
+        if (ctx.state === 'suspended') ctx.resume();
+        const now = ctx.currentTime;
+        const master = ctx.createGain();
+        master.gain.value = mgr.volume ?? 1;
+        master.connect(ctx.destination);
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(1300, now);
+        o.frequency.exponentialRampToValueAtTime(170, now + 0.18);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.linearRampToValueAtTime(0.22, now + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+        o.connect(g); g.connect(master);
+        o.start(now); o.stop(now + 0.22);
+        return;
+      }
     }
 
     const p = SHOT[this.weaponKey] ?? SHOT.pistol;
-
-    // Crack — ruído branco filtrado (buffer reaproveitado)
-    if (!this._noiseBuf) {
-      const len = Math.floor(ctx.sampleRate * 0.3);
-      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-      const d   = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
-      this._noiseBuf = buf;
-    }
-    const src = ctx.createBufferSource();
-    src.buffer = this._noiseBuf;
-    const lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass';
-    lp.frequency.value = p.cut;
-    const ng = ctx.createGain();
-    ng.gain.setValueAtTime(p.gain, now);
-    ng.gain.exponentialRampToValueAtTime(0.0001, now + p.dur);
-    src.connect(lp); lp.connect(ng); ng.connect(master);
-    src.start(now); src.stop(now + p.dur + 0.02);
-
-    // Snap — transiente agudo (highpass) que tira o "abafado" e dá ataque seco
-    const snap = ctx.createBufferSource();
-    snap.buffer = this._noiseBuf;
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 2800;
-    const sg = ctx.createGain();
-    sg.gain.setValueAtTime(p.snap ?? 0.3, now);
-    sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
-    snap.connect(hp); hp.connect(sg); sg.connect(master);
-    snap.start(now); snap.stop(now + 0.05);
-
-    // Body — thump grave que dá "peso" ao disparo
-    const o  = ctx.createOscillator();
-    const og = ctx.createGain();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(p.body, now);
-    o.frequency.exponentialRampToValueAtTime(p.body * 0.5, now + p.bodyDur);
-    og.gain.setValueAtTime(p.gain * 0.9, now);
-    og.gain.exponentialRampToValueAtTime(0.0001, now + p.bodyDur);
-    o.connect(og); og.connect(master);
-    o.start(now); o.stop(now + p.bodyDur + 0.02);
+    this.scene.sound.play('sfx-shoot', { volume: p.vol, rate: p.rate });
   }
 
   // ── BALA ──────────────────────────────────────────────────

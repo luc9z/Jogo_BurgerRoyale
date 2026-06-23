@@ -26,6 +26,7 @@ export default class MenuScene extends Phaser.Scene {
     this._buildVolume();
     this._gpIdx      = 0;   // 0 = JOGAR, 1 = FASES
     this._gpPrevs    = { up: false, down: false, a: false, start: false };
+    this._gpSynced   = false; // evita carry-over do A vindo do pause/outra tela
     this._menuBtns   = [];  // preenchido por _buildPlayButton
     this._buildPlayButton();
     this._buildControls();
@@ -306,6 +307,9 @@ export default class MenuScene extends Phaser.Scene {
       a:     !!(pad.buttons[0]?.pressed),
       start: !!(pad.buttons[9]?.pressed),
     };
+    // 1º frame: sincroniza o estado atual (se A veio pressionado do pause,
+    // não conta como "recém-apertado" e não inicia o jogo sozinho).
+    if (!this._gpSynced) { this._gpSynced = true; this._gpPrevs = now; return; }
     const prev = this._gpPrevs;
 
     if ((now.up || now.down) && !(prev.up || prev.down)) {

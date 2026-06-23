@@ -22,14 +22,16 @@ const WEAPON_ART = {
 
 // Tiro sintetizado por arma (WebAudio). crack = ruído filtrado, body = thump
 // grave. gain/dur/cut/body variam p/ dar identidade sonora a cada arma.
+// cut = brilho do corpo (alto = menos abafado). snap = estalo agudo (highpass)
+// que tira o "abafado" e dá ataque seco. body = thump grave de peso.
 const SHOT = {
-  pistol:        { gain: 0.32, dur: 0.08, cut: 3200, body: 240, bodyDur: 0.06 }, // estalo agudo, alto
-  revolver:      { gain: 0.34, dur: 0.20, cut: 900,  body: 90,  bodyDur: 0.20 }, // boom grave abafado
-  shotgun:       { gain: 0.36, dur: 0.26, cut: 700,  body: 70,  bodyDur: 0.24 }, // estouro baixo largo
-  burst:         { gain: 0.18, dur: 0.06, cut: 3600, body: 300, bodyDur: 0.04 }, // pops bem agudos
-  machinegun:    { gain: 0.14, dur: 0.05, cut: 2600, body: 220, bodyDur: 0.03 }, // rajada seca rápida
-  sniper:        { gain: 0.40, dur: 0.30, cut: 1100, body: 65,  bodyDur: 0.26 }, // crack pesado com cauda
-  doubleshotgun: { gain: 0.40, dur: 0.28, cut: 650,  body: 60,  bodyDur: 0.26 }, // o mais grave/pesado
+  pistol:        { gain: 0.34, dur: 0.09, cut: 5500, body: 240, bodyDur: 0.06, snap: 0.34 },
+  revolver:      { gain: 0.38, dur: 0.18, cut: 4200, body: 100, bodyDur: 0.18, snap: 0.40 },
+  shotgun:       { gain: 0.40, dur: 0.24, cut: 3600, body: 75,  bodyDur: 0.22, snap: 0.46 },
+  burst:         { gain: 0.22, dur: 0.06, cut: 7000, body: 300, bodyDur: 0.04, snap: 0.26 },
+  machinegun:    { gain: 0.18, dur: 0.05, cut: 6000, body: 220, bodyDur: 0.03, snap: 0.22 },
+  sniper:        { gain: 0.44, dur: 0.28, cut: 4000, body: 68,  bodyDur: 0.24, snap: 0.52 },
+  doubleshotgun: { gain: 0.44, dur: 0.26, cut: 3400, body: 62,  bodyDur: 0.24, snap: 0.50 },
 };
 
 export default class Player {
@@ -382,6 +384,18 @@ export default class Player {
     ng.gain.exponentialRampToValueAtTime(0.0001, now + p.dur);
     src.connect(lp); lp.connect(ng); ng.connect(master);
     src.start(now); src.stop(now + p.dur + 0.02);
+
+    // Snap — transiente agudo (highpass) que tira o "abafado" e dá ataque seco
+    const snap = ctx.createBufferSource();
+    snap.buffer = this._noiseBuf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2800;
+    const sg = ctx.createGain();
+    sg.gain.setValueAtTime(p.snap ?? 0.3, now);
+    sg.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+    snap.connect(hp); hp.connect(sg); sg.connect(master);
+    snap.start(now); snap.stop(now + 0.05);
 
     // Body — thump grave que dá "peso" ao disparo
     const o  = ctx.createOscillator();

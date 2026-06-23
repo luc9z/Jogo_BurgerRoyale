@@ -13,7 +13,8 @@ export const PLAYER = {
   SPEED: 190, MAX_HEARTS: 3, CLIP_SIZE: 10,
   IFRAME_MS: 950,
   SCALE: 0.65,
-  DASH_SPEED: 620, DASH_MS: 180, DASH_CD_MS: 900, DASH_IFRAME_MS: 260,
+  DASH_SPEED: 620, DASH_MS: 180, DASH_IFRAME_MS: 260,
+  DASH_MAX: 2, DASH_GAP_MS: 280, KILLS_PER_DASH: 2, // 2 cargas, recarrega a cada 2 kills
 };
 
 export const ENEMY = {

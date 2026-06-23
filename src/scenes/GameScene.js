@@ -121,6 +121,7 @@ export default class GameScene extends Phaser.Scene {
       this.score += Math.round(pts * mult);
       this.events.emit('score-changed', this.score);
       this.hud.setCombo(this._combo, mult);
+      this.player.addKillProgress(); // 2 kills → recarrega 1 dash
     };
     const onDead = () => this._gameOver();
     // Salva progresso quando uma fase começa: desbloqueia + snapshot do

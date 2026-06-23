@@ -58,6 +58,13 @@ export default class HUD {
     this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps(FONT.BODY, '#ffffff'))
       .setDepth(D + 3);
 
+    // ── Cargas de dash (esquiva) ────────────────────────────
+    s.add.text(lx + 188, ly + 68, 'DASH', ps(FONT.BODY, '#66ccff')).setDepth(D + 1);
+    this._dashGfx = s.add.graphics().setDepth(D + 2);
+    this._dashOX  = lx + 238;
+    this._dashOY  = ly + 74;
+    this._drawDash(2, 2);
+
     // ── Painel direito (pontos + round) ─────────────────────
     const rx = W - 12 - 240, ry = 4, rw = 240, rh = 68;
     const rb = s.add.graphics().setDepth(D);
@@ -114,6 +121,24 @@ export default class HUD {
     }
   }
 
+  // ── Cargas de dash (losangos) ────────────────────────────
+  _drawDash(charges, max = 2) {
+    const g = this._dashGfx;
+    if (!g) return;
+    g.clear();
+    for (let i = 0; i < max; i++) {
+      const x = this._dashOX + i * 20;
+      const y = this._dashOY;
+      const on = i < charges;
+      g.fillStyle(on ? 0x66ccff : 0x153040, 1);
+      g.fillTriangle(x, y - 7, x - 6, y, x + 6, y);
+      g.fillTriangle(x - 6, y, x + 6, y, x, y + 7);
+      g.lineStyle(1, on ? 0xaaeeff : 0x224455, 1);
+      g.strokeTriangle(x, y - 7, x - 6, y, x + 6, y);
+      g.strokeTriangle(x - 6, y, x + 6, y, x, y + 7);
+    }
+  }
+
   // ── Ammo ─────────────────────────────────────────────────
   _rebuildAmmoIcons(clipSize) {
     for (const ic of this._ammoIcons) ic.destroy();
@@ -161,6 +186,7 @@ export default class HUD {
       'reload-start':      ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText('RECARREGANDO...'); },
       'reload-done':       ()     => { if (this._reloadLbl.text !== '∞') this._reloadLbl.setText(''); },
       'show-round-banner': (r, c) => this._showBanner(r, c),
+      'dash-changed':      (c, m) => this._drawDash(c, m),
       [EVT.WEAPON_CHANGED]: key   => this._onWeaponChanged(key),
     };
     for (const evt in h) s.events.on(evt, h[evt]);

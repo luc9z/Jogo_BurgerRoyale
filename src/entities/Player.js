@@ -56,13 +56,15 @@ export default class Player {
     this._attackLock    = false;
     this._mouseDown     = false;
     this._gpReloadPrev  = false;
-    // Dash / esquiva
+    // Dash / esquiva — 2 cargas, recarrega a cada 2 kills (sem cooldown por tempo)
     this._isDashing     = false;
     this._dashUntil     = 0;
-    this._dashCdUntil   = 0;
+    this._dashGapUntil  = 0;
     this._dashDir       = new Phaser.Math.Vector2(1, 0);
     this._gpDashPrev    = false;
     this._iframeUntil   = 0;
+    this._dashCharges   = PLAYER.DASH_MAX;
+    this._killsToward   = 0;
 
     this._create();
     this._buildControls();
@@ -95,6 +97,7 @@ export default class Player {
     s.events.emit('hearts-changed', this.hearts);
     s.events.emit('ammo-changed',   this.ammo);
     s.events.emit(EVT.WEAPON_CHANGED, this.weaponKey);
+    s.events.emit('dash-changed', this._dashCharges, PLAYER.DASH_MAX);
   }
 
   _buildControls() {
@@ -162,7 +165,7 @@ export default class Player {
     const pressed = kbDash || (gpDash && !this._gpDashPrev);
     this._gpDashPrev = gpDash;
 
-    if (!pressed || this._isDashing || now < this._dashCdUntil) return;
+    if (!pressed || this._isDashing || this._dashCharges <= 0 || now < this._dashGapUntil) return;
 
     // Direção: movimento atual, senão a direção de mira
     let dx = 0, dy = 0;
@@ -178,15 +181,28 @@ export default class Player {
     const mag = Math.hypot(dx, dy) || 1;
     this._dashDir.set(dx / mag, dy / mag);
 
-    this._isDashing   = true;
-    this._dashUntil   = now + PLAYER.DASH_MS;
-    this._dashCdUntil = now + PLAYER.DASH_CD_MS;
+    this._isDashing    = true;
+    this._dashUntil    = now + PLAYER.DASH_MS;
+    this._dashGapUntil = now + PLAYER.DASH_GAP_MS;
+    this._dashCharges  = Math.max(0, this._dashCharges - 1);
+    this.scene.events.emit('dash-changed', this._dashCharges, PLAYER.DASH_MAX);
     // Nunca encurta uma janela de i-frame já ativa (ex.: levou dano antes)
-    this._iframeUntil = Math.max(this._iframeUntil || 0, now + PLAYER.DASH_IFRAME_MS);
-    this.isInvincible = true;
+    this._iframeUntil  = Math.max(this._iframeUntil || 0, now + PLAYER.DASH_IFRAME_MS);
+    this.isInvincible  = true;
 
     this._dashWhoosh();
     this._spawnAfterimages();
+  }
+
+  // Progresso de recarga do dash: a cada KILLS_PER_DASH kills → +1 carga
+  addKillProgress() {
+    if (this._dashCharges >= PLAYER.DASH_MAX) { this._killsToward = 0; return; }
+    this._killsToward++;
+    if (this._killsToward >= PLAYER.KILLS_PER_DASH) {
+      this._killsToward = 0;
+      this._dashCharges = Math.min(PLAYER.DASH_MAX, this._dashCharges + 1);
+      this.scene.events.emit('dash-changed', this._dashCharges, PLAYER.DASH_MAX);
+    }
   }
 
   // Rastro de "fantasmas" do rei durante o dash
@@ -676,12 +692,77 @@ export default class Player {
 
     this._stopHurtBlink();
     this.sprite.setVelocity(0, 0);
+    this.sprite.setAlpha(1);
     this.sprite.play(`${SKIN}-death`, true);
     this.scene.sound.play('sfx-player-death', { volume: 0.60 });
+
+    this._deathFX();
+
     this.sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       this.scene.time.delayedCall(300, () => this.scene.events.emit(EVT.PLAYER_DEAD));
     });
     this.scene.time.delayedCall(1200, () => this.scene.events.emit(EVT.PLAYER_DEAD));
+  }
+
+  // Morte cinematográfica: slow-mo, flash, zoom, explosão de partículas
+  _deathFX() {
+    const s   = this.scene;
+    const cam = s.cameras.main;
+    const px  = this.sprite.x, py = this.sprite.y;
+
+    // Flash branco forte + shake + zoom lento na morte
+    cam.flash(180, 255, 255, 255, false);
+    cam.shake(420, 0.018);
+    cam.zoomTo(1.12, 1100, 'Sine.easeInOut');
+    s.time.delayedCall(1400, () => cam.zoomTo(1, 500));
+
+    // Anel de choque
+    const ring = s.add.graphics().setDepth(DEPTH.FX + 3);
+    ring.lineStyle(4, 0xff3322, 0.9);
+    ring.strokeCircle(px, py, 10);
+    s.tweens.add({
+      targets: ring, scaleX: 6, scaleY: 6, alpha: 0,
+      duration: 600, ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+
+    // Explosão de partículas (coroa partida + faíscas douradas/vermelhas)
+    const g = s.add.graphics().setDepth(DEPTH.FX + 3);
+    const bits = [];
+    for (let i = 0; i < 22; i++) {
+      const a   = Math.random() * Math.PI * 2;
+      const spd = 60 + Math.random() * 160;
+      bits.push({
+        x: px, y: py,
+        vx: Math.cos(a) * spd, vy: Math.sin(a) * spd - 40,
+        col: [0xffd740, 0xff8800, 0xff2244, 0xffffff][i % 4],
+        r: 2 + Math.random() * 3, life: 1,
+      });
+    }
+    const ev = s.time.addEvent({
+      delay: 16, repeat: 55,
+      callback: () => {
+        g.clear();
+        for (const b of bits) {
+          b.vy += 12;          // gravidade
+          b.x += b.vx * 0.016;
+          b.y += b.vy * 0.016;
+          b.life -= 0.018;
+          if (b.life <= 0) continue;
+          g.fillStyle(b.col, Math.max(0, b.life));
+          g.fillCircle(b.x, b.y, b.r);
+        }
+      },
+      callbackScope: this,
+    });
+    s.time.delayedCall(1100, () => { ev.remove(); g.destroy(); });
+
+    // Vinheta escura crescendo
+    const { WIDTH: W, HEIGHT: H } = this.scene.scale.gameSize;
+    const vig = s.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0)
+      .setScrollFactor(0).setDepth(DEPTH.FX + 2);
+    s.tweens.add({ targets: vig, fillAlpha: 0.45, duration: 1000 });
+    s.time.delayedCall(1300, () => vig.destroy());
   }
 
   reloadFull() {

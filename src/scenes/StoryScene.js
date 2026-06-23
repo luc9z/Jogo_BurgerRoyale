@@ -95,7 +95,7 @@ export default class StoryScene extends Phaser.Scene {
 
     // ── Faixa + título ─────────────────────────────────────
     this._ribbon = this.add.graphics().setDepth(3);
-    this._titleTxt = this.add.text(W / 2, 132, '', txt(FONT.HERO, '#ffd740'))
+    this._titleTxt = this.add.text(W / 2, 132, '', txt(FONT.TITLE, '#ffd740'))
       .setOrigin(0.5).setDepth(4).setAlpha(0);
 
     // ── Card de texto ──────────────────────────────────────
@@ -172,10 +172,10 @@ export default class StoryScene extends Phaser.Scene {
     this.tweens.add({ targets: e, alpha: 0, duration: dur, ease: 'Quad.easeIn' });
   }
 
-  _drawRibbon(tint) {
+  _drawRibbon(tint, textW = 300) {
     const g = this._ribbon;
     g.clear();
-    const bw = 360, bh = 46, by = 132;
+    const bw = Math.max(300, textW + 56), bh = 42, by = 132;
     g.fillStyle(0x0c0008, 0.8); g.fillRoundedRect(W/2 - bw/2, by - bh/2, bw, bh, 8);
     g.lineStyle(2, tint, 0.9);   g.strokeRoundedRect(W/2 - bw/2, by - bh/2, bw, bh, 8);
     // "abas" laterais
@@ -202,7 +202,6 @@ export default class StoryScene extends Phaser.Scene {
     });
 
     this._drawGlow(p.tint);
-    this._drawRibbon(p.tint);
     this._drawCard(p.tint);
     this._drawCrown(W / 2, 86, p.tint);
 
@@ -210,8 +209,10 @@ export default class StoryScene extends Phaser.Scene {
     const t = i / (PANELS.length - 1);
     this.tweens.add({ targets: this._clown, scale: 1.4 + t * 0.5, x: W/2 + 270 - t * 60, duration: 600, ease: 'Sine.easeInOut' });
 
-    // Título entra
-    this._titleTxt.setText(p.title).setColor(p.color).setAlpha(0).setScale(0.7).setY(118);
+    // Título: define o texto primeiro p/ medir a largura e ajustar a faixa
+    this._titleTxt.setText(p.title).setColor(p.color);
+    this._drawRibbon(p.tint, this._titleTxt.width);
+    this._titleTxt.setAlpha(0).setScale(0.7).setY(118);
     this.tweens.add({ targets: this._titleTxt, alpha: 1, scale: 1, y: 132, duration: 420, ease: 'Back.easeOut' });
 
     // Linhas entram em cascata

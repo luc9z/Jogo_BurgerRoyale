@@ -395,12 +395,10 @@ export default class UpgradeScene extends Phaser.Scene {
 
   // ── CAIXA MISTERIOSA (estilo CS:GO) ──────────────────────
   _buildMysteryBox() {
-    const { score = 0, currentWeapon = 'pistol' } = this._data;
-    // SEMPRE disponível, desde que você tenha algum saldo e exista arma melhor
-    // (nunca dá downgrade — só sorteia armas de tier acima da atual).
-    const curTier = WEAPONS[currentWeapon]?.tier ?? 0;
-    const canRoll = WEAPON_POOL.some(w => w.tier > curTier);
-    if (score <= 0 || !canRoll) return;
+    const { score = 0 } = this._data;
+    // SEMPRE disponível (com qualquer saldo). Sorteia QUALQUER arma — aleatório
+    // total — então pode até "rebaixar"; é a graça da aposta.
+    if (score <= 0) return;
 
     const cy = H - 60, cw = 470, ch = 50, cx = W / 2;
     const D = DEPTH.OVERLAY + 4;
@@ -438,24 +436,18 @@ export default class UpgradeScene extends Phaser.Scene {
   }
 
   _pickBoxWinner() {
-    const curTier = WEAPONS[this._data?.currentWeapon ?? 'pistol']?.tier ?? 0;
-    let list = WEAPON_POOL.filter(w => w.tier > curTier);
-    if (!list.length) list = WEAPON_POOL.slice();
-    // Peso = raridade: comum sai fácil, secreto (laser) é muito raro
-    const weights = list.map(w => RARITY[w.key]?.weight ?? 10);
+    // ALEATÓRIO TOTAL: qualquer arma do pool. Revólver um pouco mais comum.
+    const list = WEAPON_POOL;
+    const weights = list.map(w => (w.key === 'revolver' ? 16 : 10));
     const total = weights.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < list.length; i++) { r -= weights[i]; if (r <= 0) return list[i]; }
     return list[list.length - 1];
   }
 
-  // Arma aleatória ponderada por raridade (preenche a fita visualmente)
+  // Arma aleatória p/ preencher a fita (mesma distribuição do sorteio)
   _randWeapon() {
-    const weights = WEAPON_POOL.map(w => RARITY[w.key]?.weight ?? 10);
-    const total = weights.reduce((a, b) => a + b, 0);
-    let r = Math.random() * total;
-    for (let i = 0; i < WEAPON_POOL.length; i++) { r -= weights[i]; if (r <= 0) return WEAPON_POOL[i]; }
-    return WEAPON_POOL[0];
+    return this._pickBoxWinner();
   }
 
   _openBox() {

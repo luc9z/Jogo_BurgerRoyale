@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  GAME, ARENA, COLOR, DEPTH, EVT, WEAPONS, PLAYER, MAX_LEVELS,
+  GAME, ARENA, COLOR, DEPTH, EVT, WEAPONS, PLAYER, MAX_LEVELS, ROUND,
 } from '../constants.js';
 import Player       from '../entities/Player.js';
 import EnemyManager from '../systems/EnemyManager.js';
@@ -85,6 +85,7 @@ export default class GameScene extends Phaser.Scene {
     this._paused          = false;
     this._pendingNextRound = false;
     this._pickups         = [];
+    this._roundTimeLeft   = ROUND.TIME_MS;
     this._gpStartPrev     = false;
 
     this._makeBulletTexture();
@@ -116,7 +117,11 @@ export default class GameScene extends Phaser.Scene {
     const onDead = () => this._gameOver();
     // Salva progresso quando uma fase começa: desbloqueia + snapshot do
     // estado de ENTRADA (permite começar direto por essa fase no menu).
-    const onRoundStart = r => this._saveProgress(r);
+    const onRoundStart = r => {
+      this._saveProgress(r);
+      // Reinicia o limite de tempo da rodada (cresce com o round)
+      this._roundTimeLeft = ROUND.TIME_MS + (r - 1) * ROUND.TIME_PER_ROUND;
+    };
 
     this.events.on('resume', onResume);
     this.events.on(EVT.ENEMY_KILLED, onKilled);
@@ -180,6 +185,19 @@ export default class GameScene extends Phaser.Scene {
     this.hud.update(this.player.ammo, this.enemies.aliveCount);
 
     this._checkPickups();
+
+    // Cronômetro da rodada — só corre enquanto a wave não foi limpa.
+    // Zerou antes de limpar → tempo esgotado → game over.
+    if (!this._roundEnding) {
+      this._roundTimeLeft -= delta;
+      if (this._roundTimeLeft <= 0) {
+        this._roundTimeLeft = 0;
+        this.hud.setTimer(0);
+        this._gameOver();
+        return;
+      }
+      this.hud.setTimer(this._roundTimeLeft);
+    }
 
     if (!this._roundEnding && this.enemies.isRoundComplete()) {
       this._roundEnding = true;

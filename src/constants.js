@@ -33,7 +33,10 @@ export const ENEMY_TYPES = {
 export const MAX_LEVELS = 5;
 
 export const BULLET = { SPEED: 520, DAMAGE: 25 };
-export const ROUND  = { WARN_MS: 3500, SPAWN_MS: 480, BASE_COUNT: 6, PER_ROUND: 3, MAX_COUNT: 50 };
+export const ROUND  = {
+  WARN_MS: 3500, SPAWN_MS: 480, BASE_COUNT: 6, PER_ROUND: 3, MAX_COUNT: 50,
+  TIME_MS: 60000, TIME_PER_ROUND: 8000, // limite por rodada (cresce por round)
+};
 
 // tier = posição na escada de evolução. Upgrades só oferecem armas de tier
 // MAIOR que a equipada — nunca repete nem rebaixa (pistola→revólver→...→laser).

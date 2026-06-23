@@ -69,8 +69,12 @@ export default class HUD {
     s.add.text(rx + 10, ry + 40, 'ROUND',  ps(FONT.BODY, '#ff8800')).setDepth(D + 1);
     this._roundTxt = s.add.text(rx + rw - 10, ry + 40, '1', ps(FONT.VALUE, '#ff8800')).setOrigin(1, 0).setDepth(D + 2);
 
+    // ── Cronômetro da rodada ────────────────────────────────
+    this._timerTxt = s.add.text(W / 2, 12, '', txt(FONT.VALUE, '#ffd740'))
+      .setOrigin(0.5, 0).setDepth(D + 1);
+
     // ── Inimigos restantes ──────────────────────────────────
-    this._enemyTxt = s.add.text(W / 2, 14, '', txt(FONT.BODY, '#ff5555'))
+    this._enemyTxt = s.add.text(W / 2, 38, '', txt(FONT.BODY, '#ff5555'))
       .setOrigin(0.5, 0).setDepth(D + 1);
 
     // ── Banners ─────────────────────────────────────────────
@@ -199,6 +203,24 @@ export default class HUD {
         });
       },
     });
+  }
+
+  // Cronômetro: ms restantes → "MM:SS", fica vermelho e pulsa quando ≤10s
+  setTimer(ms) {
+    const total = Math.max(0, Math.ceil(ms / 1000));
+    const mm = Math.floor(total / 60);
+    const ss = total % 60;
+    const str = `${mm}:${ss.toString().padStart(2, '0')}`;
+    this._timerTxt.setText(str);
+    const low = total <= 10;
+    this._timerTxt.setColor(low ? '#ff3322' : '#ffd740');
+    if (low && total !== this._lastTick) {
+      this.scene.tweens.add({
+        targets: this._timerTxt, scaleX: 1.25, scaleY: 1.25,
+        duration: 90, yoyo: true, ease: 'Power2',
+      });
+    }
+    this._lastTick = total;
   }
 
   update(ammo, enemyCount) {

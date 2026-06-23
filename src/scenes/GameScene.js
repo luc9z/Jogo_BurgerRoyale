@@ -90,6 +90,7 @@ export default class GameScene extends Phaser.Scene {
     this._comboUntil      = 0;
     this._endless         = false;
     this._voObjs          = []; // objetos da tela de vitória (p/ remover no CONTINUAR)
+    this._stats           = { shots: 0, hits: 0, kills: 0, bestCombo: 1 };
     this._gpStartPrev     = false;
 
     this._makeBulletTexture();
@@ -124,6 +125,8 @@ export default class GameScene extends Phaser.Scene {
       this.events.emit('score-changed', this.score);
       this.hud.setCombo(this._combo, mult);
       this.player.addKillProgress(); // 2 kills → recarrega 1 dash
+      this._stats.kills++;
+      this._stats.bestCombo = Math.max(this._stats.bestCombo, this._combo);
     };
     const onDead = () => this._gameOver();
     // Salva progresso quando uma fase começa: desbloqueia + snapshot do
@@ -228,18 +231,20 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Cronômetro: só corre se a wave ainda não foi limpa (verificada acima).
-    // Zerou → tempo esgotado → game over por tempo.
-    this._roundTimeLeft -= delta;
-    if (this._roundTimeLeft <= 0) {
-      this._roundTimeLeft = 0;
-      this.hud.setTimer(0);
-      this.cameras.main.shake(260, 0.012);
-      this.cameras.main.flash(220, 120, 0, 0, false);
-      this._gameOver(true); // true = tempo esgotado
-      return;
+    // Cronômetro: só corre com a wave ativa. Congela na transição de fim de
+    // round (_roundEnding) p/ não dar game over injusto na comemoração.
+    if (!this._roundEnding) {
+      this._roundTimeLeft -= delta;
+      if (this._roundTimeLeft <= 0) {
+        this._roundTimeLeft = 0;
+        this.hud.setTimer(0);
+        this.cameras.main.shake(260, 0.012);
+        this.cameras.main.flash(220, 120, 0, 0, false);
+        this._gameOver(true); // true = tempo esgotado
+        return;
+      }
+      this.hud.setTimer(this._roundTimeLeft);
     }
-    this.hud.setTimer(this._roundTimeLeft);
   }
 
   // Abre a loja de upgrades e pausa o jogo (entre rounds, inclusive no infinito)
@@ -517,12 +522,17 @@ export default class GameScene extends Phaser.Scene {
 
       const subTxt = timeUp ? 'O TEMPO ACABOU!' : 'Os palhaços venceram...';
       const subCol = timeUp ? '#ff3322' : '#ffaa00';
-      this.add.text(W/2, H/2-110, 'GAME OVER', ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-64,  subTxt,      ps(FONT.BODY, subCol)).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-36,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE,'#ffd740')).setOrigin(0.5).setDepth(D+1);
-      this.add.text(W/2, H/2-8,   `Rounds: ${this.enemies.round}`, ps(FONT.BODY,'#ff8800')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-128, 'GAME OVER', ps(FONT.HERO,'#ff2200')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-84,  subTxt,      ps(FONT.BODY, subCol)).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-58,  `Pontuação: ${this.score.toLocaleString('pt-BR')}`, ps(FONT.VALUE,'#ffd740')).setOrigin(0.5).setDepth(D+1);
+
+      // Estatísticas da partida
+      const s = this._stats;
+      const acc = s.shots > 0 ? Math.round((s.hits / s.shots) * 100) : 0;
+      this.add.text(W/2, H/2-30, `Rounds  ${this.enemies.round}     Abates  ${s.kills}`, ps(FONT.BODY,'#ff8800')).setOrigin(0.5).setDepth(D+1);
+      this.add.text(W/2, H/2-10, `Precisão  ${acc}%     Melhor combo  x${s.bestCombo}`, ps(FONT.BODY,'#88ccff')).setOrigin(0.5).setDepth(D+1);
       if (isNew) {
-        this.add.text(W/2, H/2+18, '✦ NOVO RECORDE! ✦', ps(FONT.BODY,'#ffd740')).setOrigin(0.5).setDepth(D+1);
+        this.add.text(W/2, H/2+14, '✦ NOVO RECORDE! ✦', ps(FONT.BODY,'#ffd740')).setOrigin(0.5).setDepth(D+1);
       }
 
       const mkBtn = (y, label, col, onClick, idx) => {

@@ -257,6 +257,7 @@ export default class EnemyManager {
           const dx = e.x - b.x, dy = e.y - b.y;
           const len = Math.hypot(dx, dy) || 1;
           e.takeDamage(b._damage ?? BULLET.DAMAGE, { x: dx/len, y: dy/len });
+          if (this.scene._stats) this.scene._stats.hits++;
           if (e.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, e.points);
           b.destroy();
           break;

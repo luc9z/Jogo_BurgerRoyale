@@ -454,6 +454,7 @@ export default class Player {
 
     const baseAngle = Math.atan2(this.lastDir.y, this.lastDir.x);
     const w = this.weaponDef;
+    if (this.scene._stats) this.scene._stats.shots += w.pellets;
     for (let i = 0; i < w.pellets; i++) {
       this._fireBullet(baseAngle + (Math.random() - 0.5) * w.spread);
     }
@@ -570,6 +571,7 @@ export default class Player {
 
     if (hitEnemy) {
       hitEnemy.takeDamage(damage, { x: cos, y: sin });
+      if (this.scene._stats) this.scene._stats.hits++;
       if (hitEnemy.isDead) this.scene.events.emit(EVT.ENEMY_KILLED, hitEnemy.points);
     }
   }

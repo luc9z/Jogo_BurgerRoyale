@@ -391,12 +391,18 @@ export default class GameScene extends Phaser.Scene {
         this.add.text(W/2, H/2+18, '✦ NOVO RECORDE! ✦', ps(FONT.BODY,'#ffd740')).setOrigin(0.5).setDepth(D+1);
       }
 
-      const mkBtn = (y, label, col, onClick) => {
+      const mkBtn = (y, label, col, onClick, idx) => {
         const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
           .setStrokeStyle(2, col).setDepth(D+1)
           .setInteractive({ useHandCursor: true });
         const label2 = this.add.text(W/2, y, label, ps(FONT.BODY, '#ffffff')).setOrigin(0.5).setDepth(D+2);
-        btn.on('pointerover', () => { btn.setFillStyle(0x1a001a); this.tweens.add({ targets:[btn,label2], scaleX:1.05, scaleY:1.05, duration:60 }); });
+        btn.on('pointerover', () => {
+          btn.setFillStyle(0x1a001a);
+          this.tweens.add({ targets:[btn,label2], scaleX:1.05, scaleY:1.05, duration:60 });
+          // Mouse move o selected box para o botão sob o cursor
+          this._goGpIdx = idx;
+          this._drawGoSelector();
+        });
         btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,label2], scaleX:1,    scaleY:1,    duration:60 }); });
         btn.on('pointerdown', onClick);
       };
@@ -412,8 +418,8 @@ export default class GameScene extends Phaser.Scene {
         this.scene.start('MenuScene');
       };
 
-      mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, _goRestart);
-      mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555,        _goMenu);
+      mkBtn(H/2 + 86,  'JOGAR NOVAMENTE', COLOR.WALL_GLOW, _goRestart, 0);
+      mkBtn(H/2 + 140, 'MENU PRINCIPAL',  0x555555,        _goMenu,    1);
 
       // Gamepad navigation
       this._goGpIdx     = 0;
@@ -523,12 +529,17 @@ export default class GameScene extends Phaser.Scene {
         this.add.text(W/2, H/2+22, '✦ NOVO RECORDE! ✦', ps(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(D+1);
       }
 
-      const mkBtn = (y, label, col, onClick) => {
+      const mkBtn = (y, label, col, onClick, idx) => {
         const btn = this.add.rectangle(W/2, y, 280, 40, 0x0c000f)
           .setStrokeStyle(2, col).setDepth(D+1)
           .setInteractive({ useHandCursor: true });
         const lbl = this.add.text(W/2, y, label, ps(FONT.BODY, '#ffffff')).setOrigin(0.5).setDepth(D+2);
-        btn.on('pointerover', () => { btn.setFillStyle(0x1a1400); this.tweens.add({ targets:[btn,lbl], scaleX:1.05, scaleY:1.05, duration:60 }); });
+        btn.on('pointerover', () => {
+          btn.setFillStyle(0x1a1400);
+          this.tweens.add({ targets:[btn,lbl], scaleX:1.05, scaleY:1.05, duration:60 });
+          this._goGpIdx = idx;
+          this._drawGoSelector();
+        });
         btn.on('pointerout',  () => { btn.setFillStyle(0x0c000f); this.tweens.add({ targets:[btn,lbl], scaleX:1,    scaleY:1,    duration:60 }); });
         btn.on('pointerdown', onClick);
       };
@@ -546,8 +557,8 @@ export default class GameScene extends Phaser.Scene {
         this.scene.start('MenuScene');
       };
 
-      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, _vRestart);
-      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555,          _vMenu);
+      mkBtn(H/2 + 90,  'JOGAR DE NOVO',  COLOR.GOLD_LIGHT, _vRestart, 0);
+      mkBtn(H/2 + 144, 'MENU PRINCIPAL', 0x555555,          _vMenu,    1);
 
       // Gamepad navigation
       this._goGpIdx     = 0;

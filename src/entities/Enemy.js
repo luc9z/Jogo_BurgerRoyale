@@ -206,6 +206,7 @@ export default class Enemy {
       this.hpBar.fillColor = pct > 0.5 ? 0x22cc44 : pct > 0.25 ? 0xff8800 : 0xff2200;
     }
 
+    this._showDamage(amount);
     this.scene.sound.play('sfx-clown-hit', { volume: 0.30 });
 
     // Boss: transições de fase
@@ -335,6 +336,27 @@ export default class Enemy {
     }).setDepth(DEPTH.FX + 1);
     this.scene.tweens.add({
       targets: t, y: y - 60, alpha: 0, duration: 900,
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  // Número de dano flutuante ao ser atingido
+  _showDamage(amount) {
+    if (!this.sprite?.active) return;
+    const x = this.sprite.x + Phaser.Math.Between(-8, 8);
+    const y = this.sprite.y - this._halfH * 0.4;
+    const big = amount >= 80;
+    const t = this.scene.add.text(x, y, `${Math.round(amount)}`, {
+      fontFamily: '"Press Start 2P", monospace',
+      fontSize: big ? '14px' : '10px',
+      color: big ? '#ffdd33' : '#ffffff',
+      stroke: '#000', strokeThickness: big ? 5 : 3,
+    }).setOrigin(0.5).setDepth(DEPTH.FX + 2);
+    const dx = Phaser.Math.Between(-14, 14);
+    this.scene.tweens.add({
+      targets: t, x: x + dx, y: y - 34, alpha: 0,
+      scaleX: big ? 1.3 : 1, scaleY: big ? 1.3 : 1,
+      duration: 620, ease: 'Quad.easeOut',
       onComplete: () => t.destroy(),
     });
   }

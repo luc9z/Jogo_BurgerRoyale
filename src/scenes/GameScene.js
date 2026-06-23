@@ -86,6 +86,8 @@ export default class GameScene extends Phaser.Scene {
     this._pendingNextRound = false;
     this._pickups         = [];
     this._roundTimeLeft   = ROUND.TIME_MS;
+    this._combo           = 0;
+    this._comboUntil      = 0;
     this._gpStartPrev     = false;
 
     this._makeBulletTexture();
@@ -111,8 +113,14 @@ export default class GameScene extends Phaser.Scene {
       }
     };
     const onKilled = pts => {
-      this.score += pts;
+      const now = this.time.now;
+      this._combo = (now <= this._comboUntil) ? this._combo + 1 : 1;
+      this._comboUntil = now + 2500; // janela p/ manter o combo
+      // Multiplicador cresce com o combo (cap 3x)
+      const mult = Math.min(1 + (this._combo - 1) * 0.1, 3);
+      this.score += Math.round(pts * mult);
       this.events.emit('score-changed', this.score);
+      this.hud.setCombo(this._combo, mult);
     };
     const onDead = () => this._gameOver();
     // Salva progresso quando uma fase começa: desbloqueia + snapshot do
@@ -185,6 +193,12 @@ export default class GameScene extends Phaser.Scene {
     this.hud.update(this.player.ammo, this.enemies.aliveCount);
 
     this._checkPickups();
+
+    // Expira o combo se passar da janela sem matar
+    if (this._combo > 0 && this.time.now > this._comboUntil) {
+      this._combo = 0;
+      this.hud.setCombo(0, 1);
+    }
 
     if (!this._roundEnding && this.enemies.isRoundComplete()) {
       this._roundEnding = true;

@@ -56,6 +56,13 @@ export default class Player {
     this._attackLock    = false;
     this._mouseDown     = false;
     this._gpReloadPrev  = false;
+    // Dash / esquiva
+    this._isDashing     = false;
+    this._dashUntil     = 0;
+    this._dashCdUntil   = 0;
+    this._dashDir       = new Phaser.Math.Vector2(1, 0);
+    this._gpDashPrev    = false;
+    this._iframeUntil   = 0;
 
     this._create();
     this._buildControls();
@@ -99,6 +106,7 @@ export default class Player {
       S: Phaser.Input.Keyboard.KeyCodes.S,
       D: Phaser.Input.Keyboard.KeyCodes.D,
       R: Phaser.Input.Keyboard.KeyCodes.R,
+      SPACE: Phaser.Input.Keyboard.KeyCodes.SPACE,
     });
 
     // Cursor oculto + crosshair customizado
@@ -129,12 +137,107 @@ export default class Player {
 
   update(_delta) {
     if (this.isDead) return;
+    // Invencibilidade controlada por janela única (dano OU dash)
+    this.isInvincible = this.scene.time.now < (this._iframeUntil || 0);
     this._updateAim();
+    this._handleDash();
     this._move();
     this._handleShoot();
     this._handleReloadKey();
     this.shadow.setPosition(this.sprite.x, this.sprite.y + this._halfH - 4);
     this._drawGun();
+  }
+
+  // ── DASH / ESQUIVA ────────────────────────────────────────
+  _handleDash() {
+    const now = this.scene.time.now;
+
+    // Fim do dash (isInvincible é resolvido pela janela _iframeUntil no update)
+    if (this._isDashing && now >= this._dashUntil) this._isDashing = false;
+
+    // Detecta input (borda de subida): Espaço ou botão B do controle
+    const pad     = this.scene.input.gamepad?.getPad(0);
+    const gpDash  = !!(pad?.buttons[1]?.pressed); // B
+    const kbDash  = Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+    const pressed = kbDash || (gpDash && !this._gpDashPrev);
+    this._gpDashPrev = gpDash;
+
+    if (!pressed || this._isDashing || now < this._dashCdUntil) return;
+
+    // Direção: movimento atual, senão a direção de mira
+    let dx = 0, dy = 0;
+    if (this.cursors.left.isDown  || this.keys.A.isDown) dx -= 1;
+    if (this.cursors.right.isDown || this.keys.D.isDown) dx += 1;
+    if (this.cursors.up.isDown    || this.keys.W.isDown) dy -= 1;
+    if (this.cursors.down.isDown  || this.keys.S.isDown) dy += 1;
+    if (pad) {
+      const ls = pad.leftStick;
+      if (ls && (Math.abs(ls.x) > 0.3 || Math.abs(ls.y) > 0.3)) { dx = ls.x; dy = ls.y; }
+    }
+    if (dx === 0 && dy === 0) { dx = this.lastDir.x; dy = this.lastDir.y; }
+    const mag = Math.hypot(dx, dy) || 1;
+    this._dashDir.set(dx / mag, dy / mag);
+
+    this._isDashing   = true;
+    this._dashUntil   = now + PLAYER.DASH_MS;
+    this._dashCdUntil = now + PLAYER.DASH_CD_MS;
+    // Nunca encurta uma janela de i-frame já ativa (ex.: levou dano antes)
+    this._iframeUntil = Math.max(this._iframeUntil || 0, now + PLAYER.DASH_IFRAME_MS);
+    this.isInvincible = true;
+
+    this._dashWhoosh();
+    this._spawnAfterimages();
+  }
+
+  // Rastro de "fantasmas" do rei durante o dash
+  _spawnAfterimages() {
+    const tex = this.sprite.texture.key;
+    const frame = this.sprite.frame.name;
+    for (let i = 0; i < 4; i++) {
+      this.scene.time.delayedCall(i * 32, () => {
+        if (this.isDead) return;
+        const ghost = this.scene.add.image(this.sprite.x, this.sprite.y, tex, frame)
+          .setScale(this.sprite.scaleX, this.sprite.scaleY)
+          .setFlipX(this.sprite.flipX)
+          .setDepth(DEPTH.ENTITY - 1)
+          .setTint(0x66ccff).setAlpha(0.5);
+        this.scene.tweens.add({
+          targets: ghost, alpha: 0, duration: 220,
+          onComplete: () => ghost.destroy(),
+        });
+      });
+    }
+  }
+
+  // Som de dash sintetizado (whoosh — ruído filtrado descendente)
+  _dashWhoosh() {
+    const mgr = this.scene.sound;
+    const ctx = mgr?.context;
+    if (!ctx || ctx.state === 'closed' || mgr.mute) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const master = ctx.createGain();
+    master.gain.value = (mgr.volume ?? 1) * 0.5;
+    master.connect(ctx.destination);
+    if (!this._noiseBuf) {
+      const len = Math.floor(ctx.sampleRate * 0.3);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d   = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this._noiseBuf = buf;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = this._noiseBuf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(1800, now);
+    bp.frequency.exponentialRampToValueAtTime(400, now + 0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+    src.connect(bp); bp.connect(g); g.connect(master);
+    src.start(now); src.stop(now + 0.22);
   }
 
   // Mira e crosshair: analógico direito do controle ou mouse
@@ -265,6 +368,17 @@ export default class Player {
   // ── MOVIMENTO ─────────────────────────────────────────────
   _move() {
     const { cursors, keys, sprite } = this;
+
+    // Durante o dash a velocidade é fixa na direção do dash
+    if (this._isDashing) {
+      sprite.setVelocity(this._dashDir.x * PLAYER.DASH_SPEED, this._dashDir.y * PLAYER.DASH_SPEED);
+      this.isMoving = true;
+      if (!this._attackLock && sprite.anims.currentAnim?.key !== `${SKIN}-walk`) {
+        sprite.play(`${SKIN}-walk`, true);
+      }
+      return;
+    }
+
     let vx = 0, vy = 0;
     const speed = PLAYER.SPEED + this._speedBonus;
 
@@ -522,11 +636,10 @@ export default class Player {
       });
     }
 
+    // Janela única de i-frame (compartilhada com o dash) — nunca encurta
+    this._iframeUntil = Math.max(this._iframeUntil || 0, this.scene.time.now + PLAYER.IFRAME_MS);
     this.isInvincible = true;
-    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => {
-      this.isInvincible = false;
-      this._stopHurtBlink();
-    });
+    this.scene.time.delayedCall(PLAYER.IFRAME_MS, () => this._stopHurtBlink());
 
     if (this.hearts <= 0) this._die();
   }

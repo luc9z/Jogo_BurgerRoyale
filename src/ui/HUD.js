@@ -77,6 +77,10 @@ export default class HUD {
     this._enemyTxt = s.add.text(W / 2, 38, '', txt(FONT.BODY, '#ff5555'))
       .setOrigin(0.5, 0).setDepth(D + 1);
 
+    // ── Combo ───────────────────────────────────────────────
+    this._comboTxt = s.add.text(W / 2, 62, '', txt(FONT.VALUE, '#ff6600'))
+      .setOrigin(0.5, 0).setDepth(D + 1).setAlpha(0);
+
     // ── Banners ─────────────────────────────────────────────
     this._banner = s.add.text(W / 2, H / 2 - 40, '', txt(FONT.TITLE, '#ffd740'))
       .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
@@ -84,7 +88,7 @@ export default class HUD {
     this._bannerSub = s.add.text(W / 2, H / 2 + 14, '', txt(FONT.BODY, '#ff8800'))
       .setOrigin(0.5).setDepth(DEPTH.BANNER).setAlpha(0);
 
-    s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar', txt(FONT.BODY, '#ffffff22'))
+    s.add.text(W / 2, H - 5, 'WASD mover  |  MOUSE1 atirar  |  R recarregar  |  ESPAÇO esquiva', txt(FONT.BODY, '#ffffff22'))
       .setOrigin(0.5, 1).setDepth(D);
   }
 
@@ -221,6 +225,19 @@ export default class HUD {
       });
     }
     this._lastTick = total;
+  }
+
+  // Combo: aparece a partir de 2 kills seguidos; cor esquenta com o combo
+  setCombo(combo, mult) {
+    if (combo < 2) { this._comboTxt.setAlpha(0); return; }
+    const col = combo >= 15 ? '#ff2222' : combo >= 8 ? '#ff8800' : '#ffcc33';
+    this._comboTxt.setColor(col);
+    this._comboTxt.setText(`COMBO  x${combo}   (${mult.toFixed(1)}x)`);
+    this._comboTxt.setAlpha(1);
+    this.scene.tweens.add({
+      targets: this._comboTxt, scaleX: 1.2, scaleY: 1.2,
+      duration: 80, yoyo: true, ease: 'Power2',
+    });
   }
 
   update(ammo, enemyCount) {

@@ -209,7 +209,7 @@ export default class MenuScene extends Phaser.Scene {
 
   // ── CONTROLES ─────────────────────────────────────────────
   _buildControls() {
-    const totalW = 680;
+    const totalW = 820;
     const rowH   = 36;
     const barH   = rowH * 2 + 16;
     const barY   = H - barH / 2 - 8;
@@ -226,18 +226,20 @@ export default class MenuScene extends Phaser.Scene {
 
     // 5 colunas — teclado e controle alinhados pela ação
     const kbItems = [
-      ['WASD',  'mover'],
-      ['MOUSE', 'mirar'],
-      ['CLICK', 'atirar'],
-      ['R',     'recarregar'],
-      ['ESC',   'pausar'],
+      ['WASD',   'mover'],
+      ['MOUSE',  'mirar'],
+      ['CLICK',  'atirar'],
+      ['R',      'recarregar'],
+      ['ESPAÇO', 'esquiva'],
+      ['ESC',    'pausar'],
     ];
-    // A (Xbox) = X/Cruz no PS5  |  X (Xbox) = Quadrado no PS5
+    // A (Xbox) = X/Cruz no PS5  |  X (Xbox) = Quadrado no PS5  |  B = Círculo
     const gpItems = [
       ['L.STICK', 'mover'],
       ['R.STICK', 'mirar'],
       ['RT / A',  'atirar'],     // A = Cruz (PS5)
       ['X / LB',  'recarreg.'], // X = Quad (PS5)
+      ['B',       'esquiva'],   // B = Círculo (PS5)
       ['START',   'pausar'],
     ];
 

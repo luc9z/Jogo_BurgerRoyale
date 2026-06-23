@@ -122,10 +122,10 @@ export default class UpgradeScene extends Phaser.Scene {
 
     const options = this._pickOptions(hearts, maxHearts, currentWeapon, round);
     const n       = options.length;
-    const cardW   = 210, cardH = 240, gap = 18;
+    const cardW   = 210, cardH = 216, gap = 18;
     const totalW  = cardW * n + gap * (n - 1);
     const startX  = W / 2 - totalW / 2 + cardW / 2;
-    const cardY   = H / 2 + 44;
+    const cardY   = H / 2 + 22; // sobe um pouco p/ dar espaço à caixa misteriosa
 
     options.forEach((opt, i) => {
       this._makeCard(startX + i * (cardW + gap), cardY, cardW, cardH, opt, score >= opt.cost, D);
@@ -384,27 +384,45 @@ export default class UpgradeScene extends Phaser.Scene {
   // ── CAIXA MISTERIOSA (estilo CS:GO) ──────────────────────
   _buildMysteryBox() {
     const { score = 0, currentWeapon = 'pistol' } = this._data;
-    // Só oferece se houver saldo razoável e ainda houver arma a evoluir
+    // SEMPRE disponível, desde que você tenha algum saldo e exista arma melhor
+    // (nunca dá downgrade — só sorteia armas de tier acima da atual).
     const curTier = WEAPONS[currentWeapon]?.tier ?? 0;
     const canRoll = WEAPON_POOL.some(w => w.tier > curTier);
-    if (score < 1000 || !canRoll) return;
+    if (score <= 0 || !canRoll) return;
 
-    const cy = H - 74, cw = 440, ch = 40, cx = W / 2;
-    const D = DEPTH.OVERLAY + 2;
-    const bg = this.add.rectangle(cx, cy, cw, ch, 0x06121e)
-      .setStrokeStyle(2, 0x00ccff).setDepth(D + 1)
+    const cy = H - 60, cw = 470, ch = 50, cx = W / 2;
+    const D = DEPTH.OVERLAY + 4;
+
+    // Halo pulsante atrás (chama atenção)
+    const glow = this.add.graphics().setDepth(D).setBlendMode(Phaser.BlendModes.SCREEN);
+    glow.fillStyle(0x00ccff, 0.20); glow.fillRoundedRect(cx - cw/2 - 8, cy - ch/2 - 8, cw + 16, ch + 16, 12);
+    this.tweens.add({ targets: glow, alpha: 0.35, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    // Corpo claro com borda cyan grossa
+    const bg = this.add.rectangle(cx, cy, cw, ch, 0x0a2738)
+      .setStrokeStyle(3, 0x00ddff).setDepth(D + 1)
       .setInteractive({ useHandCursor: true });
-    this.add.text(cx, cy - 7, '🎁  CAIXA MISTERIOSA', ps(FONT.BODY, '#00ccff'))
-      .setOrigin(0.5).setDepth(D + 2);
-    this.add.text(cx, cy + 9, `arma aleatória — custa TODO o saldo (${score.toLocaleString('pt-BR')} pts)`,
-      ps(FONT.BODY, '#88ddff')).setOrigin(0.5).setDepth(D + 2);
 
-    bg.on('pointerover', () => { bg.setFillStyle(0x0a2030); this.tweens.add({ targets: bg, scaleX: 1.03, scaleY: 1.03, duration: 70 }); });
-    bg.on('pointerout',  () => { bg.setFillStyle(0x06121e); this.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 70 }); });
+    // Ícone de presente desenhado (sem depender de emoji)
+    const gi = this.add.graphics().setDepth(D + 2);
+    const ix = cx - cw/2 + 34, iy = cy;
+    gi.fillStyle(0xffd740, 1); gi.fillRoundedRect(ix - 13, iy - 4, 26, 18, 3);   // base
+    gi.fillStyle(0xffe680, 1); gi.fillRoundedRect(ix - 14, iy - 11, 28, 8, 2);   // tampa
+    gi.fillStyle(0xff4488, 1); gi.fillRect(ix - 2, iy - 11, 4, 25);              // fita V
+    gi.fillRect(ix - 13, iy - 1, 26, 4);                                          // fita H
+    gi.fillStyle(0xff77aa, 1); gi.fillCircle(ix - 5, iy - 13, 3); gi.fillCircle(ix + 5, iy - 13, 3); // laço
+
+    this.add.text(cx + 12, cy - 9, 'CAIXA MISTERIOSA', ps(FONT.VALUE, '#00ddff'))
+      .setOrigin(0.5).setDepth(D + 2);
+    this.add.text(cx + 12, cy + 12, `arma aleatória · custa TODO o saldo (${score.toLocaleString('pt-BR')} pts)`,
+      ps(FONT.BODY, '#aaeeff')).setOrigin(0.5).setDepth(D + 2);
+
+    bg.on('pointerover', () => { bg.setFillStyle(0x114055); this.tweens.add({ targets: bg, scaleX: 1.03, scaleY: 1.05, duration: 70 }); });
+    bg.on('pointerout',  () => { bg.setFillStyle(0x0a2738); this.tweens.add({ targets: bg, scaleX: 1, scaleY: 1, duration: 70 }); });
     bg.on('pointerdown', () => { if (!this._chosen) { this._chosen = true; this._openBox(); } });
 
     // Navegável pelo controle (entra na lista do seletor)
-    this._gpCards.push({ bg, opt: { key: '__box__', color: 0x00ccff }, cx, cy, cw, ch });
+    this._gpCards.push({ bg, opt: { key: '__box__', color: 0x00ddff }, cx, cy, cw, ch });
   }
 
   _pickBoxWinner() {
@@ -467,19 +485,69 @@ export default class UpgradeScene extends Phaser.Scene {
 
     this.tweens.add({
       targets: reel, x: finalX, duration: 4200, ease: 'Quart.easeOut',
-      onComplete: () => {
-        this._chosen = 'done';
-        // Destaca o vencedor
-        const flash = this.add.rectangle(W / 2, reelY, CARD_W - 8, 116, winner.color, 0)
-          .setStrokeStyle(3, 0xffffff).setDepth(D + 2);
-        this.tweens.add({ targets: flash, alpha: 0.25, duration: 200, yoyo: true, repeat: 2 });
-        uiBlip(this, true);
-        this.add.text(W / 2, reelY + 96, `VOCÊ GANHOU:  ${winner.label}!`, ps(FONT.VALUE, '#ffd740'))
-          .setOrigin(0.5).setDepth(D + 3);
+      onComplete: () => { this._chosen = 'done'; this._revealWinner(winner, reel, mark, D); },
+    });
+  }
 
-        this.time.delayedCall(1500, () => this._resolveBox(winner));
+  // Revelação com ZOOM na arma ganha
+  _revealWinner(winner, reel, mark, D) {
+    uiBlip(this, true);
+    // Some com a roleta e o ponteiro
+    this.tweens.add({ targets: [reel, mark], alpha: 0, duration: 300 });
+
+    const cx = W / 2, cy = H / 2 - 10;
+
+    // Flash branco
+    const flash = this.add.rectangle(W/2, H/2, W, H, 0xffffff, 0).setDepth(D + 4);
+    this.tweens.add({ targets: flash, alpha: 0.55, duration: 90, yoyo: true,
+      onComplete: () => flash.destroy() });
+
+    // Raios de luz girando atrás
+    const rays = this.add.graphics().setDepth(D + 4).setBlendMode(Phaser.BlendModes.SCREEN);
+    rays.fillStyle(winner.color, 0.22);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2;
+      rays.slice(cx, cy, 460, a - 0.13, a + 0.13, false); rays.fillPath();
+    }
+    rays.setScale(0.2).setAlpha(0);
+    this.tweens.add({ targets: rays, alpha: 1, scale: 1, duration: 420, ease: 'Cubic.easeOut' });
+    this.tweens.add({ targets: rays, angle: 360, duration: 9000, repeat: -1, ease: 'Linear' });
+
+    // Halo circular
+    const halo = this.add.graphics().setDepth(D + 5).setBlendMode(Phaser.BlendModes.SCREEN);
+    halo.fillStyle(winner.color, 0.30); halo.fillCircle(cx, cy, 92);
+    halo.setScale(0.3).setAlpha(0);
+    this.tweens.add({ targets: halo, alpha: 1, scale: 1, duration: 380, ease: 'Back.easeOut' });
+
+    // Ícone GIGANTE da arma — zoom de pequeno a grande
+    const icon = this.add.image(cx, cy, `wicon-${winner.key}`)
+      .setDisplaySize(36, 36).setTint(winner.color).setDepth(D + 6).setAlpha(0);
+    this.tweens.add({
+      targets: icon, alpha: 1, displayWidth: 150, displayHeight: 150,
+      duration: 520, ease: 'Back.easeOut',
+      onComplete: () => {
+        // leve "respiração"
+        this.tweens.add({ targets: icon, displayWidth: 160, displayHeight: 160,
+          duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       },
     });
+
+    // Texto: nome da arma + "VOCÊ GANHOU"
+    const got = this.add.text(cx, cy - 110, 'VOCÊ GANHOU', ps(FONT.BODY, '#aaeeff'))
+      .setOrigin(0.5).setDepth(D + 6).setAlpha(0);
+    const name = this.add.text(cx, cy + 96, winner.label, ps(FONT.TITLE, '#ffd740'))
+      .setOrigin(0.5).setDepth(D + 6).setAlpha(0).setScale(0.6);
+    this.tweens.add({ targets: got, alpha: 1, duration: 300, delay: 250 });
+    this.tweens.add({ targets: name, alpha: 1, scale: 1, duration: 420, delay: 350, ease: 'Back.easeOut' });
+
+    // Stats da arma
+    const w = WEAPONS[winner.key];
+    if (w) {
+      this.add.text(cx, cy + 128, `${w.damage} dano · ${w.clipSize > 0 ? w.clipSize + ' tiros' : 'especial'}`,
+        ps(FONT.BODY, '#cccccc')).setOrigin(0.5).setDepth(D + 6);
+    }
+
+    this.time.delayedCall(2100, () => this._resolveBox(winner));
   }
 
   _resolveBox(winner) {

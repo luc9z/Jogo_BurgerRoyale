@@ -28,7 +28,7 @@ export default class HUD {
     const ps = txt;
 
     // ── Painel esquerdo ─────────────────────────────────────
-    const lx = 10, ly = 4, lw = 285, lh = 100;
+    const lx = 10, ly = 4, lw = 285, lh = 122;
     const lb = s.add.graphics().setDepth(D);
     lb.fillStyle(COLOR.HUD_BG, 0.92); lb.fillRoundedRect(lx, ly, lw, lh, 6);
     lb.lineStyle(1.5, COLOR.HUD_BORDER, 1); lb.strokeRoundedRect(lx, ly, lw, lh, 6);
@@ -59,11 +59,11 @@ export default class HUD {
     this._weaponNameTxt = s.add.text(lx + 76, ly + 68, 'PISTOLA', ps(FONT.BODY, '#ffffff'))
       .setDepth(D + 3);
 
-    // ── Cargas de dash (esquiva) ────────────────────────────
-    s.add.text(lx + 188, ly + 68, 'DASH', ps(FONT.BODY, '#66ccff')).setDepth(D + 1);
+    // ── Cargas de dash (esquiva) — linha própria, abaixo da arma ──
+    s.add.text(lx + 8, ly + 98, 'DASH', ps(FONT.BODY, '#66ccff')).setDepth(D + 1);
     this._dashGfx = s.add.graphics().setDepth(D + 2);
-    this._dashOX  = lx + 238;
-    this._dashOY  = ly + 74;
+    this._dashOX  = lx + 64;
+    this._dashOY  = ly + 102;
     this._drawDash(2, 2);
 
     // ── Painel direito (pontos + round) ─────────────────────

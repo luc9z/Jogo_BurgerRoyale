@@ -245,10 +245,10 @@ export default class MenuScene extends Phaser.Scene {
     const ky = barY - rowH/2 + 6;
     const gy = barY + rowH/2 - 6;
 
-    kbItems.forEach(([key, action], i) => {
+    kbItems.forEach(([key], i) => {
       const ix = W/2 - totalW/2 + itemW * i + itemW/2;
-      this.add.text(ix, ky - 8, key,    txt(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(4);
-      this.add.text(ix, ky + 8, action, txt(FONT.BODY, '#888888')).setOrigin(0.5).setDepth(4);
+      // Só a tecla — a ação aparece uma vez, sob a linha do controle
+      this.add.text(ix, ky, key, txt(FONT.BODY, '#ffd740')).setOrigin(0.5).setDepth(4);
     });
 
     gpItems.forEach(([key, action], i) => {
